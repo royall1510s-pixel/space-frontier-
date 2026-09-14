@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kosmiczna Przygoda</string>
+    <string name="tap_to_start">TAP TO START</string>
+    <string name="stage_1">Stage 1/3</string>
+    <string name="stage_2">Stage 2/3</string>
+    <string name="stage_3">Stage 3/3</string>
+</resources>
