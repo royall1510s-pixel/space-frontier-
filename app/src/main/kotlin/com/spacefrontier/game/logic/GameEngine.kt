@@ -5,6 +5,7 @@ import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Planets
 import com.spacefrontier.game.models.Rocket
 import com.spacefrontier.game.models.RocketCatalog
+import com.spacefrontier.game.models.RocketUpgrade
 
 class GameEngine(
     context: Context
@@ -29,6 +30,9 @@ class GameEngine(
 
     private val unlockedRocketIds =
         mutableSetOf<Int>()
+
+    private val rocketUpgrades =
+        mutableMapOf<Int, RocketUpgrade>()
 
     init {
 
@@ -73,28 +77,91 @@ class GameEngine(
 
             selectedRocketId = 1
         }
+
+        loadRocketUpgrades()
+    }
+
+    private fun loadRocketUpgrades() {
+
+        rocketUpgrades.clear()
+
+        RocketCatalog.all.forEach { rocket ->
+
+            val upgrade =
+                RocketUpgrade(
+                    rocketId = rocket.id,
+                    engineLevel =
+                        preferences.getInt(
+                            "rocket_${rocket.id}_engine",
+                            0
+                        ),
+                    fuelLevel =
+                        preferences.getInt(
+                            "rocket_${rocket.id}_fuel",
+                            0
+                        ),
+                    altitudeLevel =
+                        preferences.getInt(
+                            "rocket_${rocket.id}_altitude",
+                            0
+                        )
+                )
+
+            rocketUpgrades[
+                rocket.id
+            ] = upgrade
+        }
     }
 
     private fun saveProgress() {
 
-        preferences.edit()
-            .putInt(
-                "coins",
-                state.totalCoins
+        val editor =
+            preferences.edit()
+
+        editor.putInt(
+            "coins",
+            state.totalCoins
+        )
+
+        editor.putStringSet(
+            "unlocked_rockets",
+            unlockedRocketIds
+                .map {
+                    it.toString()
+                }
+                .toSet()
+        )
+
+        editor.putInt(
+            "selected_rocket",
+            selectedRocketId
+        )
+
+        rocketUpgrades.forEach { entry ->
+
+            val rocketId =
+                entry.key
+
+            val upgrade =
+                entry.value
+
+            editor.putInt(
+                "rocket_${rocketId}_engine",
+                upgrade.engineLevel
             )
-            .putStringSet(
-                "unlocked_rockets",
-                unlockedRocketIds
-                    .map {
-                        it.toString()
-                    }
-                    .toSet()
+
+            editor.putInt(
+                "rocket_${rocketId}_fuel",
+                upgrade.fuelLevel
             )
-            .putInt(
-                "selected_rocket",
-                selectedRocketId
+
+            editor.putInt(
+                "rocket_${rocketId}_altitude",
+                upgrade.altitudeLevel
             )
-            .apply()
+        }
+
+        editor.apply()
     }
 
     fun getGameState(): GameState =
@@ -103,7 +170,28 @@ class GameEngine(
     fun getRocketCatalog(): List<Rocket> =
         RocketCatalog.all.map { rocket ->
 
+            val upgrade =
+                getRocketUpgrade(
+                    rocket.id
+                )
+
             rocket.copy(
+                thrust =
+                    rocket.thrust +
+                            upgrade.engineBonus,
+
+                maxFuel =
+                    rocket.maxFuel +
+                            upgrade.fuelBonus,
+
+                maxAltitude =
+                    rocket.maxAltitude +
+                            upgrade.altitudeBonus,
+
+                fuel =
+                    rocket.maxFuel +
+                            upgrade.fuelBonus,
+
                 unlocked =
                     unlockedRocketIds.contains(
                         rocket.id
@@ -111,19 +199,196 @@ class GameEngine(
             )
         }
 
-    fun getSelectedRocket(): Rocket =
-        RocketCatalog.all.first {
+    fun getSelectedRocket(): Rocket {
 
-            it.id ==
-                    selectedRocketId
+        val rocket =
+            RocketCatalog.all.first {
+
+                it.id ==
+                        selectedRocketId
+            }
+
+        val upgrade =
+            getRocketUpgrade(
+                rocket.id
+            )
+
+        return rocket.copy(
+
+            thrust =
+                rocket.thrust +
+                        upgrade.engineBonus,
+
+            maxFuel =
+                rocket.maxFuel +
+                        upgrade.fuelBonus,
+
+            maxAltitude =
+                rocket.maxAltitude +
+                        upgrade.altitudeBonus,
+
+            fuel =
+                rocket.maxFuel +
+                        upgrade.fuelBonus,
+
+            unlocked = true
+        )
+    }
+
+    fun getRocketUpgrade(
+        rocketId: Int
+    ): RocketUpgrade {
+
+        return rocketUpgrades.getOrPut(
+            rocketId
+        ) {
+
+            RocketUpgrade(
+                rocketId = rocketId
+            )
+        }
+    }
+
+    fun upgradeEngine(
+        rocketId: Int
+    ): Boolean {
+
+        if (
+            !unlockedRocketIds.contains(
+                rocketId
+            )
+        ) {
+
+            return false
         }
 
-    fun isRocketUnlocked(
+        val upgrade =
+            getRocketUpgrade(
+                rocketId
+            )
+
+        val cost =
+            upgrade.engineCost
+
+        if (
+            state.totalCoins <
+            cost
+        ) {
+
+            return false
+        }
+
+        state.totalCoins -=
+            cost
+
+        upgrade.engineLevel++
+
+        if (
+            rocketId ==
+            selectedRocketId
+        ) {
+
+            prepareRocket()
+        }
+
+        saveProgress()
+
+        return true
+    }
+
+    fun upgradeFuel(
         rocketId: Int
-    ): Boolean =
-        unlockedRocketIds.contains(
-            rocketId
-        )
+    ): Boolean {
+
+        if (
+            !unlockedRocketIds.contains(
+                rocketId
+            )
+        ) {
+
+            return false
+        }
+
+        val upgrade =
+            getRocketUpgrade(
+                rocketId
+            )
+
+        val cost =
+            upgrade.fuelCost
+
+        if (
+            state.totalCoins <
+            cost
+        ) {
+
+            return false
+        }
+
+        state.totalCoins -=
+            cost
+
+        upgrade.fuelLevel++
+
+        if (
+            rocketId ==
+            selectedRocketId
+        ) {
+
+            prepareRocket()
+        }
+
+        saveProgress()
+
+        return true
+    }
+
+    fun upgradeAltitude(
+        rocketId: Int
+    ): Boolean {
+
+        if (
+            !unlockedRocketIds.contains(
+                rocketId
+            )
+        ) {
+
+            return false
+        }
+
+        val upgrade =
+            getRocketUpgrade(
+                rocketId
+            )
+
+        val cost =
+            upgrade.altitudeCost
+
+        if (
+            state.totalCoins <
+            cost
+        ) {
+
+            return false
+        }
+
+        state.totalCoins -=
+            cost
+
+        upgrade.altitudeLevel++
+
+        if (
+            rocketId ==
+            selectedRocketId
+        ) {
+
+            prepareRocket()
+        }
+
+        saveProgress()
+
+        return true
+    }
 
     fun buyRocket(
         rocketId: Int
@@ -212,15 +477,23 @@ class GameEngine(
 
         state.rocket =
             template.copy(
-                fuel = template.maxFuel,
+
+                fuel =
+                    template.maxFuel,
+
                 altitude = 0f,
+
                 velocity = 0f,
+
                 acceleration = 0f,
+
                 stage = 0,
+
                 unlocked = true
             )
 
-        state.missionReward = 0
+        state.missionReward =
+            0
     }
 
     private fun choosePlanet() {
@@ -509,6 +782,19 @@ class GameEngine(
                     0
             }
 
+        val upgradeBonus =
+            (
+                getRocketUpgrade(
+                    rocket.id
+                ).engineLevel +
+                        getRocketUpgrade(
+                            rocket.id
+                        ).fuelLevel +
+                        getRocketUpgrade(
+                            rocket.id
+                        ).altitudeLevel
+                ) * 25
+
         val altitudeBonus =
             (
                 rocket.altitude /
@@ -518,6 +804,7 @@ class GameEngine(
         return (
             baseReward +
                     rocketBonus +
+                    upgradeBonus +
                     altitudeBonus
             ).coerceAtLeast(
                 baseReward
