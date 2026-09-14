@@ -51,8 +51,7 @@ class GameEngine(
             preferences.getStringSet(
                 "unlocked_rockets",
                 setOf("1")
-            )
-                ?: setOf("1")
+            ) ?: setOf("1")
 
         unlockedRocketIds.clear()
 
@@ -86,7 +85,9 @@ class GameEngine(
             .putStringSet(
                 "unlocked_rockets",
                 unlockedRocketIds
-                    .map { it.toString() }
+                    .map {
+                        it.toString()
+                    }
                     .toSet()
             )
             .putInt(
@@ -133,8 +134,7 @@ class GameEngine(
 
                 it.id ==
                         rocketId
-            }
-                ?: return false
+            } ?: return false
 
         if (
             unlockedRocketIds.contains(
@@ -470,6 +470,58 @@ class GameEngine(
         }
     }
 
+    private fun calculateMissionReward(): Int {
+
+        val planet =
+            state.currentPlanet
+                ?: return 0
+
+        val rocket =
+            state.rocket
+
+        val baseReward =
+            planet.reward
+
+        val rocketBonus =
+            when {
+
+                rocket.id >= 20 ->
+                    1000
+
+                rocket.id >= 18 ->
+                    700
+
+                rocket.id >= 15 ->
+                    500
+
+                rocket.id >= 12 ->
+                    300
+
+                rocket.id >= 9 ->
+                    200
+
+                rocket.id >= 6 ->
+                    100
+
+                else ->
+                    0
+            }
+
+        val altitudeBonus =
+            (
+                rocket.altitude /
+                        100f
+            ).toInt() * 10
+
+        return (
+            baseReward +
+                    rocketBonus +
+                    altitudeBonus
+            ).coerceAtLeast(
+                baseReward
+            )
+    }
+
     private fun landing(
         deltaTime: Float
     ) {
@@ -477,27 +529,16 @@ class GameEngine(
         val rocket =
             state.rocket
 
-        val planet =
-            state.currentPlanet
-                ?: return
-
-        val distanceToGround =
-            landingStartedAltitude
-                .coerceAtLeast(
-                    1f
-                )
-
-        val brakingForce =
-            12f +
-                    (
-                        distanceToGround /
-                                100f
-                    ).coerceAtMost(
-                        10f
-                    )
-
         rocket.acceleration =
-            -brakingForce
+            -(
+                12f +
+                        (
+                            landingStartedAltitude /
+                                    100f
+                        ).coerceAtMost(
+                            10f
+                        )
+                )
 
         rocket.velocity +=
             rocket.acceleration *
@@ -535,8 +576,11 @@ class GameEngine(
                 state.gamePhase =
                     GameState.GamePhase.LANDED_SUCCESS
 
+                val reward =
+                    calculateMissionReward()
+
                 state.totalCoins +=
-                    planet.reward
+                    reward
 
                 saveProgress()
 
