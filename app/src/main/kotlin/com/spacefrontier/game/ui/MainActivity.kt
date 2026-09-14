@@ -914,6 +914,10 @@ class MainActivity : AppCompatActivity() {
                         "🪐 DOTKNIJ, ABY WYBRAĆ PLANETĘ"
         }
 
+        binding.missionPanel.setMission(
+            gameEngine.getCurrentPlanetMission()
+        )
+
         binding.statusText.text =
             when (
                 gameState.gamePhase
