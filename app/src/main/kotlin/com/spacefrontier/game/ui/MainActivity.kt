@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.spacefrontier.game.audio.SoundManager
 import com.spacefrontier.game.databinding.ActivityMainBinding
 import com.spacefrontier.game.logic.GameEngine
+import com.spacefrontier.game.logic.MissionRequirementChecker
 import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Rocket
 import kotlin.math.roundToInt
@@ -219,6 +220,40 @@ class MainActivity : AppCompatActivity() {
         ) {
 
             GameState.GamePhase.AWAITING_FIRST_TAP -> {
+
+                val planet =
+                    gameState.currentPlanet
+
+                if (planet == null) {
+
+                    Toast.makeText(
+                        this,
+                        "🛑 Nie wybrano planety.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return
+                }
+
+                val requirement =
+                    MissionRequirementChecker.check(
+                        rocket = gameState.rocket,
+                        planet = planet
+                    )
+
+                if (!requirement.canStart) {
+
+                    binding.tapHintText.text =
+                        "🛑 RAKIETA ZA SŁABA"
+
+                    Toast.makeText(
+                        this,
+                        requirement.message,
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    return
+                }
 
                 soundManager.playEngineStart()
 
