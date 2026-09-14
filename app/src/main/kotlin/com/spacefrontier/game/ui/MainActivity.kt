@@ -950,7 +950,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.missionPanel.setMission(
-            gameEngine.getCurrentPlanetMission()
+            gameEngine.getCurrentPlanetMission(),
+            gameState.rocket
         )
 
         binding.statusText.text =
