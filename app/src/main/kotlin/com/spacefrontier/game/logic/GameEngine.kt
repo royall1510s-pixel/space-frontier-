@@ -1,25 +1,99 @@
 package com.spacefrontier.game.logic
 
+import android.content.Context
 import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Planets
 import com.spacefrontier.game.models.Rocket
 import com.spacefrontier.game.models.RocketCatalog
 
-class GameEngine {
+class GameEngine(
+    context: Context
+) {
 
     private val state = GameState()
+
+    private val preferences =
+        context.getSharedPreferences(
+            "space_frontier_save",
+            Context.MODE_PRIVATE
+        )
 
     private var flightTime = 0f
     private var landingStartedAltitude = 0f
 
-    private var selectedRocketId = 1
+    private var selectedRocketId =
+        preferences.getInt(
+            "selected_rocket",
+            1
+        )
 
     private val unlockedRocketIds =
-        mutableSetOf(1)
+        mutableSetOf<Int>()
 
     init {
+
+        loadProgress()
+
         prepareRocket()
+
         choosePlanet()
+    }
+
+    private fun loadProgress() {
+
+        state.totalCoins =
+            preferences.getInt(
+                "coins",
+                0
+            )
+
+        val savedRockets =
+            preferences.getStringSet(
+                "unlocked_rockets",
+                setOf("1")
+            )
+                ?: setOf("1")
+
+        unlockedRocketIds.clear()
+
+        savedRockets.forEach {
+
+            it.toIntOrNull()
+                ?.let { id ->
+                    unlockedRocketIds.add(id)
+                }
+        }
+
+        unlockedRocketIds.add(1)
+
+        if (
+            !unlockedRocketIds.contains(
+                selectedRocketId
+            )
+        ) {
+
+            selectedRocketId = 1
+        }
+    }
+
+    private fun saveProgress() {
+
+        preferences.edit()
+            .putInt(
+                "coins",
+                state.totalCoins
+            )
+            .putStringSet(
+                "unlocked_rockets",
+                unlockedRocketIds
+                    .map { it.toString() }
+                    .toSet()
+            )
+            .putInt(
+                "selected_rocket",
+                selectedRocketId
+            )
+            .apply()
     }
 
     fun getGameState(): GameState =
@@ -38,7 +112,9 @@ class GameEngine {
 
     fun getSelectedRocket(): Rocket =
         RocketCatalog.all.first {
-            it.id == selectedRocketId
+
+            it.id ==
+                    selectedRocketId
         }
 
     fun isRocketUnlocked(
@@ -54,14 +130,18 @@ class GameEngine {
 
         val rocket =
             RocketCatalog.all.firstOrNull {
-                it.id == rocketId
-            } ?: return false
+
+                it.id ==
+                        rocketId
+            }
+                ?: return false
 
         if (
             unlockedRocketIds.contains(
                 rocketId
             )
         ) {
+
             return false
         }
 
@@ -69,6 +149,7 @@ class GameEngine {
             state.totalCoins <
             rocket.price
         ) {
+
             return false
         }
 
@@ -84,6 +165,8 @@ class GameEngine {
 
         prepareRocket()
 
+        saveProgress()
+
         return true
     }
 
@@ -96,6 +179,7 @@ class GameEngine {
                 rocketId
             )
         ) {
+
             return false
         }
 
@@ -107,6 +191,7 @@ class GameEngine {
             state.gamePhase !=
             GameState.GamePhase.LANDED_FAILED
         ) {
+
             return false
         }
 
@@ -114,6 +199,8 @@ class GameEngine {
             rocketId
 
         prepareRocket()
+
+        saveProgress()
 
         return true
     }
@@ -151,7 +238,8 @@ class GameEngine {
                 state.gamePhase =
                     GameState.GamePhase.STAGE_1_ACTIVE
 
-                state.rocket.stage = 1
+                state.rocket.stage =
+                    1
             }
 
             GameState.GamePhase.STAGE_1_ACTIVE -> {
@@ -159,7 +247,8 @@ class GameEngine {
                 state.gamePhase =
                     GameState.GamePhase.STAGE_2_ACTIVE
 
-                state.rocket.stage = 2
+                state.rocket.stage =
+                    2
             }
 
             GameState.GamePhase.STAGE_2_ACTIVE -> {
@@ -167,7 +256,8 @@ class GameEngine {
                 state.gamePhase =
                     GameState.GamePhase.STAGE_3_ACTIVE
 
-                state.rocket.stage = 3
+                state.rocket.stage =
+                    3
             }
 
             GameState.GamePhase.LANDED_SUCCESS,
@@ -400,11 +490,11 @@ class GameEngine {
         val brakingForce =
             12f +
                     (
-                            distanceToGround /
-                                    100f
-                            ).coerceAtMost(
-                                10f
-                            )
+                        distanceToGround /
+                                100f
+                    ).coerceAtMost(
+                        10f
+                    )
 
         rocket.acceleration =
             -brakingForce
@@ -448,6 +538,8 @@ class GameEngine {
                 state.totalCoins +=
                     planet.reward
 
+                saveProgress()
+
             } else {
 
                 rocket.velocity =
@@ -477,4 +569,4 @@ class GameEngine {
         state.gamePhase =
             GameState.GamePhase.AWAITING_FIRST_TAP
     }
-} 
+}
