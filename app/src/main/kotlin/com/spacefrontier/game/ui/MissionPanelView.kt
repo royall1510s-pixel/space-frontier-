@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.View
 import com.spacefrontier.game.models.PlanetMission
+import com.spacefrontier.game.models.Planets
 import com.spacefrontier.game.models.Rocket
 
 class MissionPanelView(
@@ -380,7 +381,12 @@ class MissionPanelView(
                 ?: return
 
         val requiredAltitude =
-            currentMission.distance.toFloat()
+            Planets.all
+                .firstOrNull {
+                    it.name == currentMission.planetName
+                }
+                ?.targetAltitude
+                ?: currentMission.distance.toFloat()
 
         val rocketAltitude =
             currentRocket.maxAltitude
