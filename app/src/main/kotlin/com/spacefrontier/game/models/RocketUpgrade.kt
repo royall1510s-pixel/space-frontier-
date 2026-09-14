@@ -1,5 +1,7 @@
 package com.spacefrontier.game.models
 
+import com.spacefrontier.game.logic.EconomyBalance
+
 data class RocketUpgrade(
     val rocketId: Int,
     var engineLevel: Int = 0,
@@ -12,30 +14,27 @@ data class RocketUpgrade(
     }
 
     val engineBonus: Float
-        get() = engineLevel.coerceAtMost(MAX_LEVEL) * 8f
+        get() = engineLevel.coerceIn(0, MAX_LEVEL) * 8f
 
     val fuelBonus: Float
-        get() = fuelLevel.coerceAtMost(MAX_LEVEL) * 15f
+        get() = fuelLevel.coerceIn(0, MAX_LEVEL) * 15f
 
     val altitudeBonus: Float
-        get() = altitudeLevel.coerceAtMost(MAX_LEVEL) * 35f
+        get() = altitudeLevel.coerceIn(0, MAX_LEVEL) * 35f
 
     val engineCost: Int
-        get() = upgradeCost(
-            baseCost = 150,
-            level = engineLevel
+        get() = EconomyBalance.engineUpgradeCost(
+            engineLevel
         )
 
     val fuelCost: Int
-        get() = upgradeCost(
-            baseCost = 125,
-            level = fuelLevel
+        get() = EconomyBalance.fuelUpgradeCost(
+            fuelLevel
         )
 
     val altitudeCost: Int
-        get() = upgradeCost(
-            baseCost = 175,
-            level = altitudeLevel
+        get() = EconomyBalance.altitudeUpgradeCost(
+            altitudeLevel
         )
 
     val engineMaxed: Boolean
@@ -46,18 +45,4 @@ data class RocketUpgrade(
 
     val altitudeMaxed: Boolean
         get() = altitudeLevel >= MAX_LEVEL
-
-    private fun upgradeCost(
-        baseCost: Int,
-        level: Int
-    ): Int {
-
-        if (level >= MAX_LEVEL) {
-            return Int.MAX_VALUE
-        }
-
-        return baseCost *
-                (level + 1) *
-                (level + 1)
-    }
 }
