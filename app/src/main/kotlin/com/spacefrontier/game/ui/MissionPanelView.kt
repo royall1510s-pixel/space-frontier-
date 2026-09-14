@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.View
 import com.spacefrontier.game.models.PlanetMission
+import com.spacefrontier.game.models.Rocket
 
 class MissionPanelView(
     context: Context
@@ -17,8 +18,11 @@ class MissionPanelView(
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val smallPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val successPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val warningPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var mission: PlanetMission? = null
+    private var rocket: Rocket? = null
 
     init {
         backgroundPaint.color = Color.rgb(12, 25, 42)
@@ -43,13 +47,29 @@ class MissionPanelView(
             Typeface.BOLD
         )
 
+        successPaint.color = Color.rgb(85, 255, 170)
+        successPaint.textSize = 28f
+        successPaint.typeface = Typeface.create(
+            Typeface.DEFAULT,
+            Typeface.BOLD
+        )
+
+        warningPaint.color = Color.rgb(255, 100, 80)
+        warningPaint.textSize = 28f
+        warningPaint.typeface = Typeface.create(
+            Typeface.DEFAULT,
+            Typeface.BOLD
+        )
+
         setLayerType(View.LAYER_TYPE_SOFTWARE, null)
     }
 
     fun setMission(
-        newMission: PlanetMission
+        newMission: PlanetMission,
+        newRocket: Rocket? = null
     ) {
         mission = newMission
+        rocket = newRocket
         invalidate()
     }
 
@@ -60,6 +80,8 @@ class MissionPanelView(
         val height = height.toFloat()
 
         canvas.drawColor(Color.rgb(5, 9, 20))
+
+        backgroundPaint.color = Color.rgb(12, 25, 42)
 
         backgroundPaint.setShadowLayer(
             18f,
@@ -146,7 +168,16 @@ class MissionPanelView(
             difficulty = currentMission.difficulty
         )
 
-        y += 60f
+        y += 65f
+
+        drawRocketRequirement(
+            canvas = canvas,
+            x = 45f,
+            y = y,
+            maxWidth = width - 90f
+        )
+
+        y += 105f
 
         drawDescription(
             canvas = canvas,
@@ -191,81 +222,4 @@ class MissionPanelView(
             Color.rgb(255, 107, 0)
 
         val progress =
-            difficulty.coerceIn(1, 5) / 5f
-
-        canvas.drawRoundRect(
-            x,
-            barTop,
-            x + barWidth * progress,
-            barTop + barHeight,
-            10f,
-            10f,
-            backgroundPaint
-        )
-
-        backgroundPaint.color =
-            Color.rgb(12, 25, 42)
-    }
-
-    private fun drawDescription(
-        canvas: Canvas,
-        text: String,
-        x: Float,
-        startY: Float,
-        maxWidth: Float
-    ) {
-        val words = text.split(" ")
-
-        var line = ""
-        var y = startY
-
-        for (word in words) {
-
-            val candidate =
-                if (line.isEmpty()) {
-                    word
-                } else {
-                    "$line $word"
-                }
-
-            if (
-                textPaint.measureText(candidate) > maxWidth
-            ) {
-                canvas.drawText(
-                    line,
-                    x,
-                    y,
-                    smallPaint
-                )
-
-                line = word
-                y += 32f
-            } else {
-                line = candidate
-            }
-        }
-
-        if (line.isNotEmpty()) {
-            canvas.drawText(
-                line,
-                x,
-                y,
-                smallPaint
-            )
-        }
-    }
-
-    private fun formatMultiplier(
-        value: Float
-    ): String {
-        return if (value % 1f == 0f) {
-            value.toInt().toString()
-        } else {
-            String.format(
-                java.util.Locale.US,
-                "%.2f",
-                value
-            )
-        }
-    }
-}
+            difficulty.coerceIn(1,
