@@ -2,6 +2,7 @@ package com.spacefrontier.game.logic
 
 import android.content.Context
 import com.spacefrontier.game.models.GameState
+import com.spacefrontier.game.models.Planet
 import com.spacefrontier.game.models.PlanetProgress
 import com.spacefrontier.game.models.PlanetProgressCatalog
 import com.spacefrontier.game.models.Planets
@@ -46,11 +47,8 @@ class GameEngine(
         )
 
     init {
-
         loadProgress()
-
         prepareRocket()
-
         choosePlanet()
     }
 
@@ -85,12 +83,10 @@ class GameEngine(
                 selectedRocketId
             )
         ) {
-
             selectedRocketId = 1
         }
 
         loadRocketUpgrades()
-
         loadPlanetProgress()
     }
 
@@ -98,7 +94,9 @@ class GameEngine(
 
         planetProgress.clear()
 
-        PlanetProgressCatalog.all.forEachIndexed { index, planetName ->
+        PlanetProgressCatalog.all.forEachIndexed {
+                index,
+                planetName ->
 
             val missionsCompleted =
                 preferences.getInt(
@@ -128,7 +126,6 @@ class GameEngine(
             currentPlanetIndex !in
             PlanetProgressCatalog.all.indices
         ) {
-
             currentPlanetIndex = 0
         }
 
@@ -138,7 +135,6 @@ class GameEngine(
                 currentPlanetIndex
             )
         ) {
-
             currentPlanetIndex--
         }
     }
@@ -148,10 +144,17 @@ class GameEngine(
         val editor =
             preferences.edit()
 
-        planetProgress.forEachIndexed { index, entry ->
+        PlanetProgressCatalog.all.forEachIndexed {
+                index,
+                planetName ->
 
             val progress =
-                entry.value
+                planetProgress[planetName]
+                    ?: PlanetProgress(
+                        planetName = planetName,
+                        unlocked = index == 0,
+                        missionsCompleted = 0
+                    )
 
             editor.putBoolean(
                 "planet_${index}_unlocked",
@@ -269,7 +272,6 @@ class GameEngine(
                 )
 
             rocket.copy(
-
                 thrust =
                     rocket.thrust +
                             upgrade.engineBonus,
@@ -336,7 +338,6 @@ class GameEngine(
         return rocketUpgrades.getOrPut(
             rocketId
         ) {
-
             RocketUpgrade(
                 rocketId = rocketId
             )
@@ -352,7 +353,6 @@ class GameEngine(
                 rocketId
             )
         ) {
-
             return false
         }
 
@@ -368,12 +368,10 @@ class GameEngine(
             state.totalCoins <
             cost
         ) {
-
             return false
         }
 
-        state.totalCoins -=
-            cost
+        state.totalCoins -= cost
 
         upgrade.engineLevel++
 
@@ -381,7 +379,6 @@ class GameEngine(
             rocketId ==
             selectedRocketId
         ) {
-
             prepareRocket()
         }
 
@@ -399,7 +396,6 @@ class GameEngine(
                 rocketId
             )
         ) {
-
             return false
         }
 
@@ -415,12 +411,10 @@ class GameEngine(
             state.totalCoins <
             cost
         ) {
-
             return false
         }
 
-        state.totalCoins -=
-            cost
+        state.totalCoins -= cost
 
         upgrade.fuelLevel++
 
@@ -428,7 +422,6 @@ class GameEngine(
             rocketId ==
             selectedRocketId
         ) {
-
             prepareRocket()
         }
 
@@ -446,7 +439,6 @@ class GameEngine(
                 rocketId
             )
         ) {
-
             return false
         }
 
@@ -455,656 +447,4 @@ class GameEngine(
                 rocketId
             )
 
-        val cost =
-            upgrade.altitudeCost
-
-        if (
-            state.totalCoins <
-            cost
-        ) {
-
-            return false
-        }
-
-        state.totalCoins -=
-            cost
-
-        upgrade.altitudeLevel++
-
-        if (
-            rocketId ==
-            selectedRocketId
-        ) {
-
-            prepareRocket()
-        }
-
-        saveProgress()
-
-        return true
-    }
-
-    fun buyRocket(
-        rocketId: Int
-    ): Boolean {
-
-        val rocket =
-            RocketCatalog.all.firstOrNull {
-
-                it.id ==
-                        rocketId
-            } ?: return false
-
-        if (
-            unlockedRocketIds.contains(
-                rocketId
-            )
-        ) {
-
-            return false
-        }
-
-        if (
-            state.totalCoins <
-            rocket.price
-        ) {
-
-            return false
-        }
-
-        state.totalCoins -=
-            rocket.price
-
-        unlockedRocketIds.add(
-            rocketId
-        )
-
-        selectedRocketId =
-            rocketId
-
-        prepareRocket()
-
-        saveProgress()
-
-        return true
-    }
-
-    fun selectRocket(
-        rocketId: Int
-    ): Boolean {
-
-        if (
-            !unlockedRocketIds.contains(
-                rocketId
-            )
-        ) {
-
-            return false
-        }
-
-        if (
-            state.gamePhase !=
-            GameState.GamePhase.AWAITING_FIRST_TAP &&
-            state.gamePhase !=
-            GameState.GamePhase.LANDED_SUCCESS &&
-            state.gamePhase !=
-            GameState.GamePhase.LANDED_FAILED
-        ) {
-
-            return false
-        }
-
-        selectedRocketId =
-            rocketId
-
-        prepareRocket()
-
-        saveProgress()
-
-        return true
-    }
-
-    fun getPlanetProgress(): List<PlanetProgress> {
-
-        return PlanetProgressCatalog.all.map { planetName ->
-
-            planetProgress[planetName]
-                ?: PlanetProgress(
-                    planetName = planetName,
-                    unlocked = false,
-                    missionsCompleted = 0
-                )
-        }
-    }
-
-    fun isPlanetUnlocked(
-        planetIndex: Int
-    ): Boolean {
-
-        if (
-            planetIndex !in
-            PlanetProgressCatalog.all.indices
-        ) {
-
-            return false
-        }
-
-        val planetName =
-            PlanetProgressCatalog.all[
-                planetIndex
-            ]
-
-        return planetProgress[
-            planetName
-        ]?.unlocked == true
-    }
-
-    fun getCurrentPlanetIndex(): Int =
-        currentPlanetIndex
-
-    fun getCurrentPlanet(): com.spacefrontier.game.models.Planet? =
-        state.currentPlanet
-
-    private fun completePlanetMission() {
-
-        val planetName =
-            PlanetProgressCatalog.all[
-                currentPlanetIndex
-            ]
-
-        val currentProgress =
-            planetProgress.getOrPut(
-                planetName
-            ) {
-
-                PlanetProgress(
-                    planetName = planetName
-                )
-            }
-
-        currentProgress.missionsCompleted++
-
-        val nextIndex =
-            currentPlanetIndex + 1
-
-        if (
-            nextIndex <
-            PlanetProgressCatalog.all.size
-        ) {
-
-            val nextPlanetName =
-                PlanetProgressCatalog.all[
-                    nextIndex
-                ]
-
-            val nextProgress =
-                planetProgress.getOrPut(
-                    nextPlanetName
-                ) {
-
-                    PlanetProgress(
-                        planetName =
-                            nextPlanetName
-                    )
-                }
-
-            nextProgress.unlocked = true
-
-            currentPlanetIndex =
-                nextIndex
-        }
-
-        savePlanetProgress()
-    }
-
-    private fun prepareRocket() {
-
-        val template =
-            getSelectedRocket()
-
-        state.rocket =
-            template.copy(
-
-                fuel =
-                    template.maxFuel,
-
-                altitude = 0f,
-
-                velocity = 0f,
-
-                acceleration = 0f,
-
-                stage = 0,
-
-                unlocked = true
-            )
-
-        state.missionReward =
-            0
-    }
-
-    private fun choosePlanet() {
-
-        if (
-            currentPlanetIndex !in
-            Planets.all.indices
-        ) {
-
-            currentPlanetIndex = 0
-        }
-
-        state.currentPlanet =
-            Planets.all[
-                currentPlanetIndex
-            ]
-    }
-
-    fun handleTap() {
-
-        when (
-            state.gamePhase
-        ) {
-
-            GameState.GamePhase.AWAITING_FIRST_TAP -> {
-
-                state.gamePhase =
-                    GameState.GamePhase.STAGE_1_ACTIVE
-
-                state.rocket.stage =
-                    1
-            }
-
-            GameState.GamePhase.STAGE_1_ACTIVE -> {
-
-                state.gamePhase =
-                    GameState.GamePhase.STAGE_2_ACTIVE
-
-                state.rocket.stage =
-                    2
-            }
-
-            GameState.GamePhase.STAGE_2_ACTIVE -> {
-
-                state.gamePhase =
-                    GameState.GamePhase.STAGE_3_ACTIVE
-
-                state.rocket.stage =
-                    3
-            }
-
-            GameState.GamePhase.LANDED_SUCCESS,
-            GameState.GamePhase.LANDED_FAILED -> {
-
-                reset()
-            }
-
-            else -> Unit
-        }
-    }
-
-    fun update(
-        deltaTime: Float
-    ) {
-
-        val dt =
-            deltaTime.coerceIn(
-                0f,
-                0.05f
-            )
-
-        when (
-            state.gamePhase
-        ) {
-
-            GameState.GamePhase.STAGE_1_ACTIVE ->
-                launch(
-                    dt,
-                    1
-                )
-
-            GameState.GamePhase.STAGE_2_ACTIVE ->
-                launch(
-                    dt,
-                    2
-                )
-
-            GameState.GamePhase.STAGE_3_ACTIVE -> {
-
-                launch(
-                    dt,
-                    3
-                )
-
-                if (
-                    state.rocket.altitude >=
-                    40f
-                ) {
-
-                    state.gamePhase =
-                        GameState.GamePhase.IN_FLIGHT
-                }
-            }
-
-            GameState.GamePhase.IN_FLIGHT ->
-                fly(dt)
-
-            GameState.GamePhase.LANDING_SEQUENCE ->
-                landing(dt)
-
-            else -> Unit
-        }
-    }
-
-    private fun launch(
-        deltaTime: Float,
-        stage: Int
-    ) {
-
-        val rocket =
-            state.rocket
-
-        val baseThrust =
-            rocket.thrust
-
-        val thrust =
-            when (stage) {
-
-                1 ->
-                    baseThrust
-
-                2 ->
-                    baseThrust * 1.45f
-
-                else ->
-                    baseThrust * 2.0f
-            }
-
-        val fuelConsumption =
-            when (stage) {
-
-                1 ->
-                    4f
-
-                2 ->
-                    6f
-
-                else ->
-                    8f
-            }
-
-        rocket.acceleration =
-            thrust
-
-        rocket.velocity +=
-            rocket.acceleration *
-                    deltaTime
-
-        rocket.altitude +=
-            rocket.velocity *
-                    deltaTime
-
-        rocket.fuel -=
-            fuelConsumption *
-                    deltaTime
-
-        rocket.fuel =
-            rocket.fuel.coerceAtLeast(
-                0f
-            )
-
-        if (
-            rocket.fuel <= 0f
-        ) {
-
-            startLanding()
-        }
-
-        if (
-            rocket.altitude >=
-            rocket.maxAltitude
-        ) {
-
-            startLanding()
-        }
-    }
-
-    private fun fly(
-        deltaTime: Float
-    ) {
-
-        val rocket =
-            state.rocket
-
-        val planet =
-            state.currentPlanet
-                ?: return
-
-        flightTime +=
-            deltaTime
-
-        rocket.acceleration =
-            -6f
-
-        rocket.velocity +=
-            rocket.acceleration *
-                    deltaTime
-
-        if (
-            rocket.velocity < 20f
-        ) {
-
-            rocket.velocity =
-                20f
-        }
-
-        rocket.altitude +=
-            rocket.velocity *
-                    deltaTime
-
-        rocket.fuel -=
-            2f *
-                    deltaTime
-
-        rocket.fuel =
-            rocket.fuel.coerceAtLeast(
-                0f
-            )
-
-        if (
-            rocket.altitude >=
-            planet.targetAltitude ||
-            rocket.fuel <= 0f ||
-            flightTime >= 12f
-        ) {
-
-            startLanding()
-        }
-    }
-
-    private fun startLanding() {
-
-        if (
-            state.gamePhase !=
-            GameState.GamePhase.LANDING_SEQUENCE
-        ) {
-
-            landingStartedAltitude =
-                state.rocket.altitude
-
-            state.gamePhase =
-                GameState.GamePhase.LANDING_SEQUENCE
-
-            state.rocket.velocity =
-                state.rocket.velocity
-                    .coerceAtLeast(
-                        25f
-                    )
-        }
-    }
-
-    private fun calculateMissionReward(): Int {
-
-        val planet =
-            state.currentPlanet
-                ?: return 0
-
-        val rocket =
-            state.rocket
-
-        val baseReward =
-            planet.reward
-
-        val rocketBonus =
-            when {
-
-                rocket.id >= 20 ->
-                    1000
-
-                rocket.id >= 18 ->
-                    700
-
-                rocket.id >= 15 ->
-                    500
-
-                rocket.id >= 12 ->
-                    300
-
-                rocket.id >= 9 ->
-                    200
-
-                rocket.id >= 6 ->
-                    100
-
-                else ->
-                    0
-            }
-
-        val upgradeBonus =
-            (
-                getRocketUpgrade(
-                    rocket.id
-                ).engineLevel +
-                        getRocketUpgrade(
-                            rocket.id
-                        ).fuelLevel +
-                        getRocketUpgrade(
-                            rocket.id
-                        ).altitudeLevel
-                ) * 25
-
-        val altitudeBonus =
-            (
-                rocket.altitude /
-                        100f
-                ).toInt() * 10
-
-        return (
-            baseReward +
-                    rocketBonus +
-                    upgradeBonus +
-                    altitudeBonus
-            ).coerceAtLeast(
-                baseReward
-            )
-    }
-
-    private fun landing(
-        deltaTime: Float
-    ) {
-
-        val rocket =
-            state.rocket
-
-        rocket.acceleration =
-            -(
-                12f +
-                        (
-                            landingStartedAltitude /
-                                    100f
-                            ).coerceAtMost(
-                                10f
-                            )
-                )
-
-        rocket.velocity +=
-            rocket.acceleration *
-                    deltaTime
-
-        if (
-            rocket.velocity < -45f
-        ) {
-
-            rocket.velocity =
-                -45f
-        }
-
-        rocket.altitude +=
-            rocket.velocity *
-                    deltaTime
-
-        if (
-            rocket.altitude <= 0f
-        ) {
-
-            rocket.altitude =
-                0f
-
-            if (
-                rocket.velocity >= -35f
-            ) {
-
-                rocket.velocity =
-                    0f
-
-                rocket.acceleration =
-                    0f
-
-                val reward =
-                    calculateMissionReward()
-
-                state.missionReward =
-                    reward
-
-                state.gamePhase =
-                    GameState.GamePhase.LANDED_SUCCESS
-
-                state.totalCoins +=
-                    reward
-
-                completePlanetMission()
-
-                saveProgress()
-
-            } else {
-
-                rocket.velocity =
-                    0f
-
-                rocket.acceleration =
-                    0f
-
-                state.missionReward =
-                    0
-
-                state.gamePhase =
-                    GameState.GamePhase.LANDED_FAILED
-            }
-        }
-    }
-
-    private fun reset() {
-
-        prepareRocket()
-
-        flightTime =
-            0f
-
-        landingStartedAltitude =
-            0f
-
-        choosePlanet()
-
-        state.gamePhase =
-            GameState.GamePhase.AWAITING_FIRST_TAP
-    }
-} 
+        val 
