@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/gameContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#0a0e27">
 
-    <!-- Górna sekcja - Info -->
+    <!-- GÓRNA SEKCJA -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -14,18 +16,19 @@
         android:gravity="top"
         android:padding="16dp">
 
-        <!-- Monety i Stage -->
+        <!-- MONETY + ETAP -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="space-between"
+            android:gravity="center_vertical"
             android:layout_marginBottom="8dp">
 
             <TextView
                 android:id="@+id/coinsText"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:text="💰 0"
                 android:textColor="@android:color/white"
                 android:textSize="24sp"
@@ -39,21 +42,23 @@
                 android:textColor="#00ff88"
                 android:textSize="18sp"
                 android:textStyle="bold" />
+
         </LinearLayout>
 
-        <!-- Info o planecie -->
+        <!-- PLANETA -->
         <TextView
             android:id="@+id/planetInfo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🌍 Ziemia\nCel: 0.1 km"
+            android:text="🌍 Ziemia&#10;Cel: 0.1 km"
             android:textColor="#ffaa00"
             android:textSize="16sp"
             android:textStyle="bold"
             android:layout_marginBottom="12dp" />
+
     </LinearLayout>
 
-    <!-- Środek - 3D Rocket View -->
+    <!-- ŚRODEK - RAKIETA -->
     <com.spacefrontier.game.graphics.RocketView
         android:id="@+id/rocketView"
         android:layout_width="match_parent"
@@ -61,16 +66,16 @@
         android:layout_weight="3"
         android:background="#051428" />
 
-    <!-- Dolna sekcja - Status i akcje -->
+    <!-- DOLNA SEKCJA -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
-        android:gravity="center|bottom"
+        android:gravity="center"
         android:padding="16dp">
 
-        <!-- Status lotu -->
+        <!-- STATUS -->
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"
@@ -82,7 +87,7 @@
             android:gravity="center"
             android:layout_marginBottom="12dp" />
 
-        <!-- Hint -->
+        <!-- PODPOWIEDŹ -->
         <TextView
             android:id="@+id/tapHintText"
             android:layout_width="match_parent"
@@ -93,17 +98,19 @@
             android:gravity="center"
             android:layout_marginBottom="16dp" />
 
-        <!-- Szczegóły lotu -->
+        <!-- PARAMETRY LOTU -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="space_around"
+            android:gravity="center"
             android:layout_marginBottom="12dp">
 
+            <!-- PRĘDKOŚĆ -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center">
 
@@ -122,11 +129,14 @@
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
+
             </LinearLayout>
 
+            <!-- WYSOKOŚĆ -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center">
 
@@ -145,11 +155,14 @@
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
+
             </LinearLayout>
 
+            <!-- PALIWO -->
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center">
 
@@ -168,8 +181,11 @@
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
+
             </LinearLayout>
+
         </LinearLayout>
+
     </LinearLayout>
 
 </LinearLayout>
