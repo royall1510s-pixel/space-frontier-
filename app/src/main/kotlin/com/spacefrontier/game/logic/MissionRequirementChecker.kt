@@ -1,6 +1,6 @@
 package com.spacefrontier.game.logic
 
-import com.spacefrontier.game.models.PlanetMission
+import com.spacefrontier.game.models.Planet
 import com.spacefrontier.game.models.Rocket
 
 data class MissionRequirementResult(
@@ -14,11 +14,11 @@ object MissionRequirementChecker {
 
     fun check(
         rocket: Rocket,
-        mission: PlanetMission
+        planet: Planet
     ): MissionRequirementResult {
 
         val requiredAltitude =
-            mission.distance.toFloat()
+            planet.targetAltitude
 
         val rocketAltitude =
             rocket.maxAltitude
