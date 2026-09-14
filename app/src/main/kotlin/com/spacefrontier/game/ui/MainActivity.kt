@@ -36,6 +36,9 @@ class MainActivity : AppCompatActivity() {
     private var engineStreamId =
         -1
 
+    private var lastShownReward =
+        -1
+
     private val gameUpdateRunnable =
         object : Runnable {
 
@@ -48,7 +51,7 @@ class MainActivity : AppCompatActivity() {
                     (
                         currentTime -
                                 lastUpdateTime
-                    ) / 1000f
+                        ) / 1000f
 
                 lastUpdateTime =
                     currentTime
@@ -148,6 +151,16 @@ class MainActivity : AppCompatActivity() {
             if (
                 phase ==
                 GameState.GamePhase.AWAITING_FIRST_TAP
+            ) {
+
+                handleFlightTap()
+            }
+
+            if (
+                phase ==
+                GameState.GamePhase.LANDED_SUCCESS ||
+                phase ==
+                GameState.GamePhase.LANDED_FAILED
             ) {
 
                 handleFlightTap()
@@ -492,6 +505,79 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private fun updateRewardPanel(
+        gameState: GameState
+    ) {
+
+        when (
+            gameState.gamePhase
+        ) {
+
+            GameState.GamePhase.LANDED_SUCCESS -> {
+
+                binding.rewardPanel.visibility =
+                    android.view.View.VISIBLE
+
+                binding.rewardTitle.text =
+                    "🏆 MISJA UDANA!"
+
+                val planet =
+                    gameState.currentPlanet
+
+                if (planet != null) {
+
+                    binding.rewardPlanet.text =
+                        "${planet.emoji} ${planet.name.uppercase()}"
+                }
+
+                binding.rewardAmount.text =
+                    "💰 +${gameState.missionReward} MONET"
+
+                binding.rewardBalance.text =
+                    "SALDO: 💰 ${gameState.totalCoins}"
+
+                if (
+                    lastShownReward !=
+                    gameState.missionReward
+                ) {
+
+                    lastShownReward =
+                        gameState.missionReward
+                }
+            }
+
+            GameState.GamePhase.LANDED_FAILED -> {
+
+                binding.rewardPanel.visibility =
+                    android.view.View.VISIBLE
+
+                binding.rewardTitle.text =
+                    "❌ MISJA NIEUDANA"
+
+                val planet =
+                    gameState.currentPlanet
+
+                if (planet != null) {
+
+                    binding.rewardPlanet.text =
+                        "${planet.emoji} ${planet.name.uppercase()}"
+                }
+
+                binding.rewardAmount.text =
+                    "💰 +0 MONET"
+
+                binding.rewardBalance.text =
+                    "SALDO: 💰 ${gameState.totalCoins}"
+            }
+
+            else -> {
+
+                binding.rewardPanel.visibility =
+                    android.view.View.GONE
+            }
+        }
+    }
+
     private fun updateUI() {
 
         val gameState =
@@ -626,15 +712,19 @@ class MainActivity : AppCompatActivity() {
             GameState.GamePhase.LANDED_SUCCESS -> {
 
                 binding.tapHintText.text =
-                    "✅ MISJA UDANA • KLIKNIJ RAKIETĘ"
+                    "🚀 NASTĘPNA MISJA"
             }
 
             GameState.GamePhase.LANDED_FAILED -> {
 
                 binding.tapHintText.text =
-                    "❌ LĄDOWANIE NIEUDANE • RETRY"
+                    "🔄 SPRÓBUJ PONOWNIE"
             }
         }
+
+        updateRewardPanel(
+            gameState
+        )
     }
 
     override fun onDestroy() {
