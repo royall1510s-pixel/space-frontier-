@@ -15,8 +15,10 @@ import com.spacefrontier.game.audio.SoundManager
 import com.spacefrontier.game.databinding.ActivityMainBinding
 import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.logic.MissionRequirementChecker
+import com.spacefrontier.game.logic.RocketProgression
 import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Rocket
+import com.spacefrontier.game.models.RocketUpgrade
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
@@ -444,6 +446,12 @@ class MainActivity : AppCompatActivity() {
                 card,
                 rocket
             )
+        } else {
+
+            addLockedRocketInfo(
+                card,
+                rocket
+            )
         }
 
         val action =
@@ -517,19 +525,46 @@ class MainActivity : AppCompatActivity() {
 
         } else {
 
+            val previousRocket =
+                RocketProgression
+                    .getRequiredPreviousRocketName(
+                        rocket.id
+                    )
+
+            val canProgress =
+                previousRocket != null
+
             action.text =
-                "💰 KUP  ${rocket.price}"
+                if (canProgress) {
+
+                    "💰 KUP  ${rocket.price}"
+
+                } else {
+
+                    "🔒 ZABLOKOWANA"
+                }
 
             action.setTextColor(
                 Color.WHITE
             )
 
             action.setBackgroundColor(
-                Color.rgb(
-                    80,
-                    70,
-                    20
-                )
+                if (canProgress) {
+
+                    Color.rgb(
+                        80,
+                        70,
+                        20
+                    )
+
+                } else {
+
+                    Color.rgb(
+                        55,
+                        55,
+                        65
+                    )
+                }
             )
 
             action.setOnClickListener {
@@ -553,11 +588,24 @@ class MainActivity : AppCompatActivity() {
 
                 } else {
 
-                    Toast.makeText(
-                        this,
-                        "💰 Za mało monet!",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    if (
+                        previousRocket != null
+                    ) {
+
+                        Toast.makeText(
+                            this,
+                            "🔒 Najpierw odblokuj: $previousRocket",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                    } else {
+
+                        Toast.makeText(
+                            this,
+                            "💰 Potrzebujesz więcej monet.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }
@@ -581,6 +629,54 @@ class MainActivity : AppCompatActivity() {
                 card,
                 cardParams
             )
+    }
+
+    private fun addLockedRocketInfo(
+        card: LinearLayout,
+        rocket: Rocket
+    ) {
+
+        val previousRocket =
+            RocketProgression
+                .getRequiredPreviousRocketName(
+                    rocket.id
+                )
+
+        val info =
+            TextView(this)
+
+        info.text =
+            if (previousRocket != null) {
+
+                "🔒 WYMAGA: $previousRocket\n" +
+                        "💰 Cena: ${rocket.price} monet"
+
+            } else {
+
+                "🔒 RAKIETA ZABLOKOWANA"
+            }
+
+        info.setTextColor(
+            Color.rgb(
+                255,
+                190,
+                80
+            )
+        )
+
+        info.textSize =
+            12f
+
+        info.setPadding(
+            4,
+            6,
+            4,
+            2
+        )
+
+        card.addView(
+            info
+        )
     }
 
     private fun addUpgradePanel(
@@ -654,24 +750,60 @@ class MainActivity : AppCompatActivity() {
 
         addUpgradeButton(
             row,
-            "⚡\nSILNIK\nLv.${upgrade.engineLevel}\n💰 ${upgrade.engineCost}",
+            createUpgradeText(
+                "⚡",
+                "SILNIK",
+                upgrade.engineLevel,
+                upgrade.engineMaxed,
+                upgrade.engineCost
+            ),
             rocket.id,
             UpgradeType.ENGINE
         )
 
         addUpgradeButton(
             row,
-            "⛽\nPALIWO\nLv.${upgrade.fuelLevel}\n💰 ${upgrade.fuelCost}",
+            createUpgradeText(
+                "⛽",
+                "PALIWO",
+                upgrade.fuelLevel,
+                upgrade.fuelMaxed,
+                upgrade.fuelCost
+            ),
             rocket.id,
             UpgradeType.FUEL
         )
 
         addUpgradeButton(
             row,
-            "🌍\nZASIĘG\nLv.${upgrade.altitudeLevel}\n💰 ${upgrade.altitudeCost}",
+            createUpgradeText(
+                "🌍",
+                "ZASIĘG",
+                upgrade.altitudeLevel,
+                upgrade.altitudeMaxed,
+                upgrade.altitudeCost
+            ),
             rocket.id,
             UpgradeType.ALTITUDE
         )
+    }
+
+    private fun createUpgradeText(
+        icon: String,
+        label: String,
+        level: Int,
+        maxed: Boolean,
+        cost: Int
+    ): String {
+
+        return if (maxed) {
+
+            "$icon\n$label\nLv.10\nMAX"
+
+        } else {
+
+            "$icon\n$label\nLv.$level\n💰 $cost"
+        }
     }
 
     private enum class UpgradeType {
@@ -738,6 +870,35 @@ class MainActivity : AppCompatActivity() {
         )
 
         button.setOnClickListener {
+
+            val upgrade =
+                gameEngine.getRocketUpgrade(
+                    rocketId
+                )
+
+            val maxed =
+                when (type) {
+
+                    UpgradeType.ENGINE ->
+                        upgrade.engineMaxed
+
+                    UpgradeType.FUEL ->
+                        upgrade.fuelMaxed
+
+                    UpgradeType.ALTITUDE ->
+                        upgrade.altitudeMaxed
+                }
+
+            if (maxed) {
+
+                Toast.makeText(
+                    this,
+                    "🏆 To ulepszenie ma już MAX — poziom 10.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@setOnClickListener
+            }
 
             val gameState =
                 gameEngine.getGameState()
