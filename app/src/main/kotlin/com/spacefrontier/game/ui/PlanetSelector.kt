@@ -9,6 +9,7 @@ import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.spacefrontier.game.graphics.SpaceMapView
 import com.spacefrontier.game.models.PlanetProgress
 
 object PlanetSelector {
@@ -30,14 +31,18 @@ object PlanetSelector {
             LinearLayout.VERTICAL
 
         container.setPadding(
-            20,
-            18,
-            20,
-            18
+            16,
+            16,
+            16,
+            16
         )
 
         container.setBackgroundColor(
-            Color.rgb(5, 9, 20)
+            Color.rgb(
+                5,
+                9,
+                20
+            )
         )
 
         scrollView.addView(
@@ -48,7 +53,7 @@ object PlanetSelector {
             TextView(context)
 
         title.text =
-            "🪐  WYBÓR PLANETY"
+            "🌌  MAPA KOSMOSU"
 
         title.setTextColor(
             Color.WHITE
@@ -77,7 +82,7 @@ object PlanetSelector {
             TextView(context)
 
         subtitle.text =
-            "Wybierz świat dla swojej następnej misji."
+            "Wybierz odblokowany świat dla swojej następnej misji."
 
         subtitle.setTextColor(
             Color.LTGRAY
@@ -96,11 +101,74 @@ object PlanetSelector {
             )
 
         subtitleParams.topMargin =
-            6
+            5
 
         container.addView(
             subtitle,
             subtitleParams
+        )
+
+        val mapView =
+            SpaceMapView(context)
+
+        val mapParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                430
+            )
+
+        mapParams.topMargin =
+            10
+
+        mapView.setData(
+            progress = progress,
+            currentPlanetIndex = currentIndex,
+            selectedPlanetIndex = currentIndex
+        ) { index ->
+
+            onPlanetSelected(
+                index
+            )
+        }
+
+        container.addView(
+            mapView,
+            mapParams
+        )
+
+        val listTitle =
+            TextView(context)
+
+        listTitle.text =
+            "🪐  DOSTĘPNE ŚWIATY"
+
+        listTitle.setTextColor(
+            Color.WHITE
+        )
+
+        listTitle.textSize =
+            18f
+
+        listTitle.setTypeface(
+            null,
+            Typeface.BOLD
+        )
+
+        val listTitleParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        listTitleParams.topMargin =
+            12
+
+        listTitleParams.bottomMargin =
+            4
+
+        container.addView(
+            listTitle,
+            listTitleParams
         )
 
         progress.forEachIndexed {
@@ -201,7 +269,7 @@ object PlanetSelector {
             card.background =
                 background
 
-            val planetEmoji =
+            val emoji =
                 when (index) {
 
                     0 -> "🌙"
@@ -222,26 +290,23 @@ object PlanetSelector {
 
             icon.text =
                 if (unlocked) {
-                    planetEmoji
+                    emoji
                 } else {
                     "🔒"
                 }
 
             icon.textSize =
-                32f
+                30f
 
             icon.gravity =
                 Gravity.CENTER
 
-            val iconParams =
-                LinearLayout.LayoutParams(
-                    58,
-                    58
-                )
-
             card.addView(
                 icon,
-                iconParams
+                LinearLayout.LayoutParams(
+                    55,
+                    55
+                )
             )
 
             val info =
@@ -296,56 +361,6 @@ object PlanetSelector {
                 name
             )
 
-            val description =
-                TextView(context)
-
-            description.text =
-                when (index) {
-
-                    0 ->
-                        "Baza wypraw • pierwszy świat"
-
-                    1 ->
-                        "Czerwona planeta • trudniejsze misje"
-
-                    2 ->
-                        "Lodowy księżyc • ekstremalne warunki"
-
-                    3 ->
-                        "Gigantyczny księżyc • daleka wyprawa"
-
-                    4 ->
-                        "Lodowy gigant • najwyższe wyzwanie"
-
-                    else ->
-                        "Nieznany świat"
-                }
-
-            description.setTextColor(
-                if (unlocked) {
-                    Color.LTGRAY
-                } else {
-                    Color.DKGRAY
-                }
-            )
-
-            description.textSize =
-                11f
-
-            val descriptionParams =
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-
-            descriptionParams.topMargin =
-                4
-
-            info.addView(
-                description,
-                descriptionParams
-            )
-
             val missions =
                 TextView(context)
 
@@ -362,11 +377,7 @@ object PlanetSelector {
 
             missions.setTextColor(
                 if (unlocked) {
-                    Color.rgb(
-                        180,
-                        210,
-                        225
-                    )
+                    Color.LTGRAY
                 } else {
                     Color.DKGRAY
                 }
@@ -382,7 +393,7 @@ object PlanetSelector {
                 )
 
             missionsParams.topMargin =
-                4
+                5
 
             info.addView(
                 missions,
@@ -468,7 +479,7 @@ object PlanetSelector {
                 )
 
             cardParams.topMargin =
-                10
+                9
 
             container.addView(
                 card,
@@ -522,13 +533,10 @@ object PlanetSelector {
                 )
                 .create()
 
-        dialog.setOnShowListener {
-
-            dialog.window?.setBackgroundDrawableResource(
-                android.R.color.transparent
-            )
-        }
-
         dialog.show()
+
+        dialog.window?.setBackgroundDrawableResource(
+            android.R.color.transparent
+        )
     }
 }
