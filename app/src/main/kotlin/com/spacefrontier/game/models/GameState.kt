@@ -4,6 +4,7 @@ data class GameState(
     var rocket: Rocket = Rocket(),
     var currentPlanet: Planet? = null,
     var totalCoins: Int = 0,
+    var missionReward: Int = 0,
     var gamePhase: GamePhase =
         GamePhase.AWAITING_FIRST_TAP
 ) {
@@ -26,4 +27,4 @@ data class GameState(
 
         LANDED_FAILED
     }
-} 
+}
