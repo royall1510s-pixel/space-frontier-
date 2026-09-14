@@ -357,6 +357,12 @@ class GameEngine(
                 rocketId
             )
 
+        if (
+            upgrade.engineMaxed
+        ) {
+            return false
+        }
+
         val cost =
             upgrade.engineCost
 
@@ -396,6 +402,12 @@ class GameEngine(
             getRocketUpgrade(
                 rocketId
             )
+
+        if (
+            upgrade.fuelMaxed
+        ) {
+            return false
+        }
 
         val cost =
             upgrade.fuelCost
@@ -437,6 +449,12 @@ class GameEngine(
                 rocketId
             )
 
+        if (
+            upgrade.altitudeMaxed
+        ) {
+            return false
+        }
+
         val cost =
             upgrade.altitudeCost
 
@@ -472,6 +490,15 @@ class GameEngine(
         if (
             unlockedRocketIds.contains(
                 rocketId
+            )
+        ) {
+            return false
+        }
+
+        if (
+            !RocketProgression.canPurchase(
+                rocketId = rocketId,
+                unlockedRocketIds = unlockedRocketIds
             )
         ) {
             return false
