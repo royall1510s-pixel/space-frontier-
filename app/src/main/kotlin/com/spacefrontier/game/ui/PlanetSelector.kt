@@ -4,8 +4,10 @@ import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.spacefrontier.game.models.PlanetProgress
 
@@ -18,6 +20,9 @@ object PlanetSelector {
         onPlanetSelected: (Int) -> Unit
     ) {
 
+        val scrollView =
+            ScrollView(context)
+
         val container =
             LinearLayout(context)
 
@@ -25,28 +30,32 @@ object PlanetSelector {
             LinearLayout.VERTICAL
 
         container.setPadding(
-            24,
             20,
-            24,
-            20
+            18,
+            20,
+            18
         )
 
         container.setBackgroundColor(
             Color.rgb(5, 9, 20)
         )
 
+        scrollView.addView(
+            container
+        )
+
         val title =
             TextView(context)
 
         title.text =
-            "🪐 WYBÓR PLANETY"
+            "🪐  WYBÓR PLANETY"
 
         title.setTextColor(
             Color.WHITE
         )
 
         title.textSize =
-            23f
+            24f
 
         title.gravity =
             Gravity.CENTER
@@ -68,7 +77,7 @@ object PlanetSelector {
             TextView(context)
 
         subtitle.text =
-            "Odblokowuj kolejne światy dzięki udanym misjom."
+            "Wybierz świat dla swojej następnej misji."
 
         subtitle.setTextColor(
             Color.LTGRAY
@@ -120,44 +129,89 @@ object PlanetSelector {
             val selected =
                 index == currentIndex
 
-            if (selected) {
+            val background =
+                GradientDrawable()
 
-                card.setBackgroundColor(
-                    Color.rgb(
-                        20,
-                        70,
-                        90
+            background.cornerRadius =
+                18f
+
+            when {
+
+                selected -> {
+
+                    background.setColor(
+                        Color.rgb(
+                            20,
+                            75,
+                            95
+                        )
                     )
-                )
 
-            } else if (unlocked) {
-
-                card.setBackgroundColor(
-                    Color.rgb(
-                        18,
-                        30,
-                        48
+                    background.setStroke(
+                        3,
+                        Color.rgb(
+                            85,
+                            255,
+                            170
+                        )
                     )
-                )
+                }
 
-            } else {
+                unlocked -> {
 
-                card.setBackgroundColor(
-                    Color.rgb(
-                        12,
-                        17,
-                        28
+                    background.setColor(
+                        Color.rgb(
+                            17,
+                            31,
+                            50
+                        )
                     )
-                )
+
+                    background.setStroke(
+                        2,
+                        Color.rgb(
+                            45,
+                            100,
+                            135
+                        )
+                    )
+                }
+
+                else -> {
+
+                    background.setColor(
+                        Color.rgb(
+                            12,
+                            17,
+                            28
+                        )
+                    )
+
+                    background.setStroke(
+                        2,
+                        Color.rgb(
+                            45,
+                            50,
+                            60
+                        )
+                    )
+                }
             }
+
+            card.background =
+                background
 
             val planetEmoji =
                 when (index) {
 
                     0 -> "🌙"
+
                     1 -> "🔴"
+
                     2 -> "🔵"
+
                     3 -> "🟠"
+
                     4 -> "🔵"
 
                     else -> "🪐"
@@ -174,15 +228,15 @@ object PlanetSelector {
                 }
 
             icon.textSize =
-                30f
+                32f
 
             icon.gravity =
                 Gravity.CENTER
 
             val iconParams =
                 LinearLayout.LayoutParams(
-                    52,
-                    52
+                    58,
+                    58
                 )
 
             card.addView(
@@ -242,20 +296,32 @@ object PlanetSelector {
                 name
             )
 
-            val missions =
+            val description =
                 TextView(context)
 
-            missions.text =
-                if (unlocked) {
+            description.text =
+                when (index) {
 
-                    "Misje ukończone: ${planet.missionsCompleted}"
+                    0 ->
+                        "Baza wypraw • pierwszy świat"
 
-                } else {
+                    1 ->
+                        "Czerwona planeta • trudniejsze misje"
 
-                    "Ukończ poprzednią planetę"
+                    2 ->
+                        "Lodowy księżyc • ekstremalne warunki"
+
+                    3 ->
+                        "Gigantyczny księżyc • daleka wyprawa"
+
+                    4 ->
+                        "Lodowy gigant • najwyższe wyzwanie"
+
+                    else ->
+                        "Nieznany świat"
                 }
 
-            missions.setTextColor(
+            description.setTextColor(
                 if (unlocked) {
                     Color.LTGRAY
                 } else {
@@ -263,8 +329,51 @@ object PlanetSelector {
                 }
             )
 
+            description.textSize =
+                11f
+
+            val descriptionParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+
+            descriptionParams.topMargin =
+                4
+
+            info.addView(
+                description,
+                descriptionParams
+            )
+
+            val missions =
+                TextView(context)
+
+            missions.text =
+                if (unlocked) {
+
+                    "🏆 Ukończone misje: " +
+                            planet.missionsCompleted
+
+                } else {
+
+                    "🔒 Ukończ poprzednią planetę"
+                }
+
+            missions.setTextColor(
+                if (unlocked) {
+                    Color.rgb(
+                        180,
+                        210,
+                        225
+                    )
+                } else {
+                    Color.DKGRAY
+                }
+            )
+
             missions.textSize =
-                12f
+                11f
 
             val missionsParams =
                 LinearLayout.LayoutParams(
@@ -298,7 +407,7 @@ object PlanetSelector {
                         "WYBIERZ"
 
                     else ->
-                        "ZABLOKOWANA"
+                        "ZAMKNIĘTA"
                 }
 
             status.setTextColor(
@@ -324,7 +433,7 @@ object PlanetSelector {
             )
 
             status.textSize =
-                11f
+                10f
 
             status.setTypeface(
                 null,
@@ -337,7 +446,7 @@ object PlanetSelector {
             card.addView(
                 status,
                 LinearLayout.LayoutParams(
-                    82,
+                    72,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
             )
@@ -359,7 +468,7 @@ object PlanetSelector {
                 )
 
             cardParams.topMargin =
-                8
+                10
 
             container.addView(
                 card,
@@ -367,18 +476,58 @@ object PlanetSelector {
             )
         }
 
+        val footer =
+            TextView(context)
+
+        footer.text =
+            "🚀 Udane misje odblokowują kolejne światy."
+
+        footer.setTextColor(
+            Color.rgb(
+                120,
+                150,
+                170
+            )
+        )
+
+        footer.textSize =
+            11f
+
+        footer.gravity =
+            Gravity.CENTER
+
+        val footerParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        footerParams.topMargin =
+            14
+
+        footerParams.bottomMargin =
+            4
+
+        container.addView(
+            footer,
+            footerParams
+        )
+
         val dialog =
             AlertDialog.Builder(context)
-                .setView(container)
+                .setView(scrollView)
                 .setNegativeButton(
                     "ZAMKNIJ",
                     null
                 )
                 .create()
 
-        dialog.window?.setBackgroundDrawableResource(
-            android.R.color.transparent
-        )
+        dialog.setOnShowListener {
+
+            dialog.window?.setBackgroundDrawableResource(
+                android.R.color.transparent
+            )
+        }
 
         dialog.show()
     }
