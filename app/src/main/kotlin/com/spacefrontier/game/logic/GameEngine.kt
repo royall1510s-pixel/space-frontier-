@@ -219,6 +219,8 @@ class GameEngine(
                 stage = 0,
                 unlocked = true
             )
+
+        state.missionReward = 0
     }
 
     private fun choosePlanet() {
@@ -511,7 +513,7 @@ class GameEngine(
             (
                 rocket.altitude /
                         100f
-            ).toInt() * 10
+                ).toInt() * 10
 
         return (
             baseReward +
@@ -535,9 +537,9 @@ class GameEngine(
                         (
                             landingStartedAltitude /
                                     100f
-                        ).coerceAtMost(
-                            10f
-                        )
+                            ).coerceAtMost(
+                                10f
+                            )
                 )
 
         rocket.velocity +=
@@ -573,11 +575,14 @@ class GameEngine(
                 rocket.acceleration =
                     0f
 
-                state.gamePhase =
-                    GameState.GamePhase.LANDED_SUCCESS
-
                 val reward =
                     calculateMissionReward()
+
+                state.missionReward =
+                    reward
+
+                state.gamePhase =
+                    GameState.GamePhase.LANDED_SUCCESS
 
                 state.totalCoins +=
                     reward
@@ -591,6 +596,9 @@ class GameEngine(
 
                 rocket.acceleration =
                     0f
+
+                state.missionReward =
+                    0
 
                 state.gamePhase =
                     GameState.GamePhase.LANDED_FAILED
