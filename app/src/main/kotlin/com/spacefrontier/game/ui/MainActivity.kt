@@ -16,7 +16,6 @@ import com.spacefrontier.game.databinding.ActivityMainBinding
 import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Rocket
-import com.spacefrontier.game.models.RocketUpgrade
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
@@ -100,6 +99,8 @@ class MainActivity : AppCompatActivity() {
 
         setupStartButton()
 
+        setupPlanetSelector()
+
         updateUI()
 
         startGameLoop()
@@ -166,6 +167,44 @@ class MainActivity : AppCompatActivity() {
             ) {
 
                 handleFlightTap()
+            }
+        }
+    }
+
+    private fun setupPlanetSelector() {
+
+        binding.planetInfo.setOnClickListener {
+
+            PlanetSelector.show(
+                context = this,
+                progress =
+                    gameEngine.getPlanetProgress(),
+                currentIndex =
+                    gameEngine.getCurrentPlanetIndex()
+            ) { planetIndex ->
+
+                if (
+                    gameEngine.selectPlanet(
+                        planetIndex
+                    )
+                ) {
+
+                    updateUI()
+
+                    Toast.makeText(
+                        this,
+                        "🪐 Wybrano planetę",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+
+                    Toast.makeText(
+                        this,
+                        "🛑 Tej planety nie można teraz wybrać.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
@@ -871,7 +910,8 @@ class MainActivity : AppCompatActivity() {
 
             binding.planetInfo.text =
                 "${planet.emoji} ${planet.name} • " +
-                        "Cel: ${planet.targetAltitude.roundToInt()} km"
+                        "Cel: ${planet.targetAltitude.roundToInt()} km\n" +
+                        "🪐 DOTKNIJ, ABY WYBRAĆ PLANETĘ"
         }
 
         binding.statusText.text =
