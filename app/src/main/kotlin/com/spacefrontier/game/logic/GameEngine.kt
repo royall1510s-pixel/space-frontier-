@@ -69,11 +69,9 @@ class GameEngine(
         unlockedRocketIds.clear()
 
         savedRockets.forEach {
-
-            it.toIntOrNull()
-                ?.let { id ->
-                    unlockedRocketIds.add(id)
-                }
+            it.toIntOrNull()?.let { id ->
+                unlockedRocketIds.add(id)
+            }
         }
 
         unlockedRocketIds.add(1)
@@ -233,11 +231,8 @@ class GameEngine(
 
         rocketUpgrades.forEach { entry ->
 
-            val rocketId =
-                entry.key
-
-            val upgrade =
-                entry.value
+            val rocketId = entry.key
+            val upgrade = entry.value
 
             editor.putInt(
                 "rocket_${rocketId}_engine",
@@ -299,9 +294,7 @@ class GameEngine(
 
         val rocket =
             RocketCatalog.all.first {
-
-                it.id ==
-                        selectedRocketId
+                it.id == selectedRocketId
             }
 
         val upgrade =
@@ -310,7 +303,6 @@ class GameEngine(
             )
 
         return rocket.copy(
-
             thrust =
                 rocket.thrust +
                         upgrade.engineBonus,
@@ -365,19 +357,16 @@ class GameEngine(
             upgrade.engineCost
 
         if (
-            state.totalCoins <
-            cost
+            state.totalCoins < cost
         ) {
             return false
         }
 
         state.totalCoins -= cost
-
         upgrade.engineLevel++
 
         if (
-            rocketId ==
-            selectedRocketId
+            rocketId == selectedRocketId
         ) {
             prepareRocket()
         }
@@ -408,19 +397,16 @@ class GameEngine(
             upgrade.fuelCost
 
         if (
-            state.totalCoins <
-            cost
+            state.totalCoins < cost
         ) {
             return false
         }
 
         state.totalCoins -= cost
-
         upgrade.fuelLevel++
 
         if (
-            rocketId ==
-            selectedRocketId
+            rocketId == selectedRocketId
         ) {
             prepareRocket()
         }
@@ -451,19 +437,16 @@ class GameEngine(
             upgrade.altitudeCost
 
         if (
-            state.totalCoins <
-            cost
+            state.totalCoins < cost
         ) {
             return false
         }
 
         state.totalCoins -= cost
-
         upgrade.altitudeLevel++
 
         if (
-            rocketId ==
-            selectedRocketId
+            rocketId == selectedRocketId
         ) {
             prepareRocket()
         }
@@ -479,9 +462,7 @@ class GameEngine(
 
         val rocket =
             RocketCatalog.all.firstOrNull {
-
-                it.id ==
-                        rocketId
+                it.id == rocketId
             } ?: return false
 
         if (
@@ -493,14 +474,12 @@ class GameEngine(
         }
 
         if (
-            state.totalCoins <
-            rocket.price
+            state.totalCoins < rocket.price
         ) {
             return false
         }
 
-        state.totalCoins -=
-            rocket.price
+        state.totalCoins -= rocket.price
 
         unlockedRocketIds.add(
             rocketId
@@ -510,7 +489,6 @@ class GameEngine(
             rocketId
 
         prepareRocket()
-
         saveProgress()
 
         return true
@@ -543,7 +521,6 @@ class GameEngine(
             rocketId
 
         prepareRocket()
-
         saveProgress()
 
         return true
@@ -591,6 +568,58 @@ class GameEngine(
     fun getCurrentPlanet(): Planet? =
         state.currentPlanet
 
+    fun selectPlanet(
+        planetIndex: Int
+    ): Boolean {
+
+        if (
+            planetIndex !in
+            Planets.all.indices
+        ) {
+            return false
+        }
+
+        if (
+            !isPlanetUnlocked(
+                planetIndex
+            )
+        ) {
+            return false
+        }
+
+        if (
+            state.gamePhase !=
+            GameState.GamePhase.AWAITING_FIRST_TAP &&
+            state.gamePhase !=
+            GameState.GamePhase.LANDED_SUCCESS &&
+            state.gamePhase !=
+            GameState.GamePhase.LANDED_FAILED
+        ) {
+            return false
+        }
+
+        currentPlanetIndex =
+            planetIndex
+
+        state.currentPlanet =
+            Planets.all[
+                planetIndex
+            ]
+
+        prepareRocket()
+
+        flightTime = 0f
+
+        landingStartedAltitude = 0f
+
+        state.gamePhase =
+            GameState.GamePhase.AWAITING_FIRST_TAP
+
+        savePlanetProgress()
+
+        return true
+    }
+
     private fun completePlanetMission() {
 
         val planetName =
@@ -627,8 +656,7 @@ class GameEngine(
                     nextPlanetName
                 ) {
                     PlanetProgress(
-                        planetName =
-                            nextPlanetName
+                        planetName = nextPlanetName
                     )
                 }
 
@@ -648,23 +676,15 @@ class GameEngine(
 
         state.rocket =
             template.copy(
-
-                fuel =
-                    template.maxFuel,
-
+                fuel = template.maxFuel,
                 altitude = 0f,
-
                 velocity = 0f,
-
                 acceleration = 0f,
-
                 stage = 0,
-
                 unlocked = true
             )
 
-        state.missionReward =
-            0
+        state.missionReward = 0
     }
 
     private fun choosePlanet() {
@@ -737,27 +757,17 @@ class GameEngine(
         ) {
 
             GameState.GamePhase.STAGE_1_ACTIVE ->
-                launch(
-                    dt,
-                    1
-                )
+                launch(dt, 1)
 
             GameState.GamePhase.STAGE_2_ACTIVE ->
-                launch(
-                    dt,
-                    2
-                )
+                launch(dt, 2)
 
             GameState.GamePhase.STAGE_3_ACTIVE -> {
 
-                launch(
-                    dt,
-                    3
-                )
+                launch(dt, 3)
 
                 if (
-                    state.rocket.altitude >=
-                    40f
+                    state.rocket.altitude >= 40f
                 ) {
                     state.gamePhase =
                         GameState.GamePhase.IN_FLIGHT
@@ -788,27 +798,21 @@ class GameEngine(
         val thrust =
             when (stage) {
 
-                1 ->
-                    baseThrust
+                1 -> baseThrust
 
-                2 ->
-                    baseThrust * 1.45f
+                2 -> baseThrust * 1.45f
 
-                else ->
-                    baseThrust * 2.0f
+                else -> baseThrust * 2.0f
             }
 
         val fuelConsumption =
             when (stage) {
 
-                1 ->
-                    4f
+                1 -> 4f
 
-                2 ->
-                    6f
+                2 -> 6f
 
-                else ->
-                    8f
+                else -> 8f
             }
 
         rocket.acceleration =
@@ -827,9 +831,7 @@ class GameEngine(
                     deltaTime
 
         rocket.fuel =
-            rocket.fuel.coerceAtLeast(
-                0f
-            )
+            rocket.fuel.coerceAtLeast(0f)
 
         if (
             rocket.fuel <= 0f
@@ -856,11 +858,9 @@ class GameEngine(
             state.currentPlanet
                 ?: return
 
-        flightTime +=
-            deltaTime
+        flightTime += deltaTime
 
-        rocket.acceleration =
-            -6f
+        rocket.acceleration = -6f
 
         rocket.velocity +=
             rocket.acceleration *
@@ -881,9 +881,7 @@ class GameEngine(
                     deltaTime
 
         rocket.fuel =
-            rocket.fuel.coerceAtLeast(
-                0f
-            )
+            rocket.fuel.coerceAtLeast(0f)
 
         if (
             rocket.altitude >=
@@ -910,9 +908,7 @@ class GameEngine(
 
             state.rocket.velocity =
                 state.rocket.velocity
-                    .coerceAtLeast(
-                        25f
-                    )
+                    .coerceAtLeast(25f)
         }
     }
 
@@ -931,26 +927,19 @@ class GameEngine(
         val rocketBonus =
             when {
 
-                rocket.id >= 20 ->
-                    1000
+                rocket.id >= 20 -> 1000
 
-                rocket.id >= 18 ->
-                    700
+                rocket.id >= 18 -> 700
 
-                rocket.id >= 15 ->
-                    500
+                rocket.id >= 15 -> 500
 
-                rocket.id >= 12 ->
-                    300
+                rocket.id >= 12 -> 300
 
-                rocket.id >= 9 ->
-                    200
+                rocket.id >= 9 -> 200
 
-                rocket.id >= 6 ->
-                    100
+                rocket.id >= 6 -> 100
 
-                else ->
-                    0
+                else -> 0
             }
 
         val upgrade =
@@ -967,9 +956,8 @@ class GameEngine(
 
         val altitudeBonus =
             (
-                rocket.altitude /
-                        100f
-                ).toInt() * 10
+                rocket.altitude / 100f
+            ).toInt() * 10
 
         return (
             baseReward +
@@ -994,9 +982,7 @@ class GameEngine(
                         (
                             landingStartedAltitude /
                                     100f
-                            ).coerceAtMost(
-                                10f
-                            )
+                            ).coerceAtMost(10f)
                 )
 
         rocket.velocity +=
@@ -1035,8 +1021,7 @@ class GameEngine(
                 state.gamePhase =
                     GameState.GamePhase.LANDED_SUCCESS
 
-                state.totalCoins +=
-                    reward
+                state.totalCoins += reward
 
                 completePlanetMission()
 
