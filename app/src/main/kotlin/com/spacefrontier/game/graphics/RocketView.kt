@@ -7,10 +7,6 @@ import android.view.View
 import com.spacefrontier.game.models.Rocket
 import kotlin.math.sin
 
-/**
- * Główna grafika rakiety Space Frontier.
- * Rakieta + animowany płomień + gwiazdy + efekt ruchu.
- */
 class RocketView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -31,28 +27,32 @@ class RocketView @JvmOverloads constructor(
 
         val rocket = currentRocket ?: return
 
-        animationTime += 0.12f
+        animationTime += 0.08f
 
-        drawSpace(canvas)
+        drawSpaceBackground(canvas, rocket)
         drawStars(canvas, rocket)
+        drawAsteroids(canvas, rocket)
         drawRocket(canvas, rocket)
 
-        // Animacja około 60 FPS
         postInvalidateOnAnimation()
     }
 
-    private fun drawSpace(canvas: Canvas) {
+    private fun drawSpaceBackground(
+        canvas: Canvas,
+        rocket: Rocket
+    ) {
         val gradient = LinearGradient(
             0f,
             0f,
             0f,
             height.toFloat(),
-            Color.rgb(2, 7, 25),
-            Color.rgb(8, 20, 48),
+            Color.rgb(1, 5, 20),
+            Color.rgb(5, 18, 45),
             Shader.TileMode.CLAMP
         )
 
         paint.shader = gradient
+
         canvas.drawRect(
             0f,
             0f,
@@ -60,63 +60,276 @@ class RocketView @JvmOverloads constructor(
             height.toFloat(),
             paint
         )
+
         paint.shader = null
+
+        // Delikatna poświata kosmosu
+        paint.color = Color.argb(35, 50, 100, 220)
+
+        canvas.drawCircle(
+            width * 0.18f,
+            height * 0.25f,
+            width * 0.28f,
+            paint
+        )
+
+        paint.color = Color.argb(25, 180, 60, 220)
+
+        canvas.drawCircle(
+            width * 0.82f,
+            height * 0.68f,
+            width * 0.32f,
+            paint
+        )
     }
 
-    private fun drawStars(canvas: Canvas, rocket: Rocket) {
-        val movement = (rocket.altitude * 2f) % height
+    private fun drawStars(
+        canvas: Canvas,
+        rocket: Rocket
+    ) {
+        val speed = rocket.velocity.coerceAtLeast(0f)
+        val movement = (animationTime * (8f + speed * 0.12f)) % height
 
-        for (i in 0..70) {
-            val x = ((i * 97) % width).toFloat()
+        for (i in 0..95) {
 
-            var y = ((i * 173) % height).toFloat()
-            y += movement
+            val x = ((i * 97 + 31) % width).toFloat()
+
+            var y =
+                ((i * 173 + 47) % height).toFloat() +
+                        movement
 
             if (y > height) {
                 y -= height
             }
 
-            val size = when (i % 4) {
-                0 -> 1.5f
-                1 -> 2f
-                2 -> 2.5f
-                else -> 1f
+            val size = when (i % 5) {
+                0 -> 2.4f
+                1 -> 1.5f
+                2 -> 1.0f
+                3 -> 2.0f
+                else -> 0.8f
             }
 
-            paint.color = if (i % 7 == 0) {
-                Color.rgb(120, 190, 255)
-            } else {
-                Color.WHITE
+            paint.color = when (i % 9) {
+                0 -> Color.rgb(130, 210, 255)
+                1 -> Color.rgb(190, 150, 255)
+                else -> Color.WHITE
             }
 
-            canvas.drawCircle(x, y, size, paint)
+            canvas.drawCircle(
+                x,
+                y,
+                size,
+                paint
+            )
+        }
+
+        // Kilka jasnych gwiazd
+        drawBrightStar(
+            canvas,
+            width * 0.15f,
+            height * 0.18f
+        )
+
+        drawBrightStar(
+            canvas,
+            width * 0.78f,
+            height * 0.30f
+        )
+
+        drawBrightStar(
+            canvas,
+            width * 0.62f,
+            height * 0.78f
+        )
+    }
+
+    private fun drawBrightStar(
+        canvas: Canvas,
+        x: Float,
+        y: Float
+    ) {
+        paint.color = Color.argb(220, 220, 245, 255)
+
+        canvas.drawCircle(
+            x,
+            y,
+            3f,
+            paint
+        )
+
+        paint.strokeWidth = 1.5f
+
+        canvas.drawLine(
+            x - 12f,
+            y,
+            x + 12f,
+            y,
+            paint
+        )
+
+        canvas.drawLine(
+            x,
+            y - 12f,
+            x,
+            y + 12f,
+            paint
+        )
+    }
+
+    private fun drawAsteroids(
+        canvas: Canvas,
+        rocket: Rocket
+    ) {
+        val movement =
+            (animationTime * (5f + rocket.velocity * 0.05f)) %
+                    (height + 250f)
+
+        val asteroidData = listOf(
+            Triple(0.14f, 0.20f, 34f),
+            Triple(0.83f, 0.34f, 25f),
+            Triple(0.10f, 0.68f, 20f),
+            Triple(0.88f, 0.78f, 42f),
+            Triple(0.28f, 0.48f, 15f),
+            Triple(0.70f, 0.13f, 18f)
+        )
+
+        asteroidData.forEachIndexed { index, data ->
+
+            val x = width * data.first
+
+            var y =
+                height * data.second +
+                        movement *
+                        if (index % 2 == 0) 1f else -1f
+
+            if (y > height + 80f) {
+                y -= height + 160f
+            }
+
+            if (y < -80f) {
+                y += height + 160f
+            }
+
+            val radius = data.third
+
+            drawAsteroid(
+                canvas,
+                x,
+                y,
+                radius,
+                index
+            )
         }
     }
 
-    private fun drawRocket(canvas: Canvas, rocket: Rocket) {
+    private fun drawAsteroid(
+        canvas: Canvas,
+        x: Float,
+        y: Float,
+        radius: Float,
+        index: Int
+    ) {
+        val path = Path()
 
+        val points = 9
+
+        for (i in 0 until points) {
+
+            val angle =
+                Math.PI * 2.0 * i / points
+
+            val variation =
+                0.78f +
+                        ((i * 17 + index * 11) % 30) / 100f
+
+            val px =
+                x +
+                        (kotlin.math.cos(angle) *
+                                radius *
+                                variation).toFloat()
+
+            val py =
+                y +
+                        (kotlin.math.sin(angle) *
+                                radius *
+                                variation).toFloat()
+
+            if (i == 0) {
+                path.moveTo(px, py)
+            } else {
+                path.lineTo(px, py)
+            }
+        }
+
+        path.close()
+
+        paint.color = Color.rgb(65, 68, 78)
+        canvas.drawPath(path, paint)
+
+        // Oświetlona część
+        paint.color = Color.rgb(105, 108, 120)
+
+        canvas.drawCircle(
+            x - radius * 0.25f,
+            y - radius * 0.25f,
+            radius * 0.28f,
+            paint
+        )
+
+        // Kratery
+        paint.color = Color.rgb(42, 44, 52)
+
+        canvas.drawCircle(
+            x + radius * 0.25f,
+            y + radius * 0.18f,
+            radius * 0.18f,
+            paint
+        )
+
+        canvas.drawCircle(
+            x - radius * 0.18f,
+            y + radius * 0.30f,
+            radius * 0.12f,
+            paint
+        )
+
+        paint.color = Color.argb(80, 0, 0, 0)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 2f
+
+        canvas.drawPath(
+            path,
+            paint
+        )
+
+        paint.style = Paint.Style.FILL
+    }
+
+    private fun drawRocket(
+        canvas: Canvas,
+        rocket: Rocket
+    ) {
         val centerX = width / 2f
 
-        /*
-         * Rakieta pozostaje na ekranie.
-         * Przy większej wysokości przesuwa się stopniowo,
-         * a tło zaczyna przewijać się mocniej.
-         */
-        val normalizedAltitude =
-            (rocket.altitude / 250f).coerceIn(0f, 1f)
+        val altitudeProgress =
+            (rocket.altitude / 300f)
+                .coerceIn(0f, 1f)
 
         val centerY =
-            height * 0.70f -
-                    normalizedAltitude * height * 0.38f
+            height * 0.68f -
+                    altitudeProgress *
+                    height * 0.36f
 
         val rocketWidth =
-            (width * 0.11f).coerceIn(70f, 115f)
+            (width * 0.12f)
+                .coerceIn(72f, 120f)
 
-        val rocketHeight = rocketWidth * 2.25f
+        val rocketHeight =
+            rocketWidth * 2.25f
 
-        // Delikatne kołysanie rakiety
         val sway =
-            sin(animationTime * 0.8f) *
+            sin(animationTime * 2.2f) *
                     if (rocket.velocity > 0f) 2.5f else 0.5f
 
         canvas.save()
@@ -127,7 +340,6 @@ class RocketView @JvmOverloads constructor(
             centerY
         )
 
-        // Płomień
         if (rocket.velocity > 0f) {
             drawEngineFlame(
                 canvas,
@@ -148,7 +360,7 @@ class RocketView @JvmOverloads constructor(
 
         canvas.restore()
 
-        drawAltitudeIndicator(
+        drawFlightInfo(
             canvas,
             rocket
         )
@@ -158,31 +370,36 @@ class RocketView @JvmOverloads constructor(
         canvas: Canvas,
         centerX: Float,
         centerY: Float,
-        widthRocket: Float,
-        heightRocket: Float,
+        rocketWidth: Float,
+        rocketHeight: Float,
         stage: Int
     ) {
+        val bodyWidth = rocketWidth * 0.46f
+        val bodyHeight = rocketHeight * 0.55f
 
-        val bodyWidth = widthRocket * 0.46f
-        val bodyHeight = heightRocket * 0.55f
+        val top =
+            centerY - rocketHeight * 0.40f
 
-        val top = centerY - heightRocket * 0.40f
-        val bottom = top + bodyHeight
+        val bottom =
+            top + bodyHeight
 
-        // Glow rakiety
-        paint.style = Paint.Style.FILL
-        paint.color = Color.argb(55, 80, 170, 255)
+        // Aura
+        paint.color = Color.argb(
+            45,
+            80,
+            180,
+            255
+        )
 
         canvas.drawOval(
-            centerX - widthRocket * 0.43f,
-            top - 15f,
-            centerX + widthRocket * 0.43f,
-            bottom + 20f,
+            centerX - rocketWidth * 0.48f,
+            top - 20f,
+            centerX + rocketWidth * 0.48f,
+            bottom + 25f,
             paint
         )
 
-        // Kadłub
-        val bodyRect = RectF(
+        val body = RectF(
             centerX - bodyWidth / 2f,
             top,
             centerX + bodyWidth / 2f,
@@ -190,74 +407,79 @@ class RocketView @JvmOverloads constructor(
         )
 
         val bodyGradient = LinearGradient(
-            bodyRect.left,
+            body.left,
             0f,
-            bodyRect.right,
+            body.right,
             0f,
-            Color.rgb(115, 125, 140),
+            Color.rgb(90, 100, 115),
             Color.WHITE,
             Shader.TileMode.CLAMP
         )
 
         paint.shader = bodyGradient
+
         canvas.drawRoundRect(
-            bodyRect,
+            body,
             18f,
             18f,
             paint
         )
+
         paint.shader = null
 
-        // Nos rakiety
+        // Nos
         val nose = Path()
 
         nose.moveTo(
             centerX,
-            centerY - heightRocket * 0.48f
+            centerY - rocketHeight * 0.48f
         )
 
         nose.lineTo(
-            centerX - bodyWidth / 2f,
-            top + 28f
+            body.left,
+            top + 30f
         )
 
         nose.lineTo(
-            centerX + bodyWidth / 2f,
-            top + 28f
+            body.right,
+            top + 30f
         )
 
         nose.close()
 
         paint.color = when (stage) {
-            1 -> Color.rgb(220, 45, 45)
-            2 -> Color.rgb(245, 120, 25)
-            3 -> Color.rgb(70, 140, 255)
-            else -> Color.rgb(220, 45, 45)
+            1 -> Color.rgb(225, 45, 45)
+            2 -> Color.rgb(255, 120, 20)
+            3 -> Color.rgb(55, 130, 255)
+            else -> Color.rgb(225, 45, 45)
         }
 
-        canvas.drawPath(nose, paint)
+        canvas.drawPath(
+            nose,
+            paint
+        )
 
-        // Czerwone pasy
+        // Pasy
         paint.color = Color.rgb(205, 35, 35)
 
         canvas.drawRect(
-            bodyRect.left,
+            body.left,
             top + bodyHeight * 0.20f,
-            bodyRect.right,
+            body.right,
             top + bodyHeight * 0.27f,
             paint
         )
 
         canvas.drawRect(
-            bodyRect.left,
+            body.left,
             top + bodyHeight * 0.72f,
-            bodyRect.right,
+            body.right,
             top + bodyHeight * 0.79f,
             paint
         )
 
         // Okno
-        paint.color = Color.rgb(15, 25, 45)
+        paint.color = Color.rgb(8, 18, 35)
 
         canvas.drawCircle(
             centerX,
@@ -266,91 +488,87 @@ class RocketView @JvmOverloads constructor(
             paint
         )
 
-        paint.color = Color.rgb(50, 180, 255)
+        paint.color = Color.rgb(30, 170, 255)
 
         canvas.drawCircle(
             centerX,
             top + bodyHeight * 0.38f,
-            bodyWidth * 0.22f,
+            bodyWidth * 0.21f,
             paint
         )
 
-        // Błysk w oknie
-        paint.color = Color.argb(190, 220, 250, 255)
+        paint.color = Color.WHITE
 
         canvas.drawCircle(
-            centerX - bodyWidth * 0.08f,
+            centerX - bodyWidth * 0.07f,
             top + bodyHeight * 0.32f,
-            bodyWidth * 0.07f,
+            bodyWidth * 0.06f,
             paint
         )
 
-        // Lewe skrzydło
+        // Skrzydła
+        paint.color = Color.rgb(30, 85, 170)
+
         val leftWing = Path()
 
         leftWing.moveTo(
-            bodyRect.left,
-            bottom - bodyHeight * 0.28f
+            body.left,
+            bottom - bodyHeight * 0.30f
         )
 
         leftWing.lineTo(
-            bodyRect.left - widthRocket * 0.36f,
-            bottom + 5f
+            body.left - rocketWidth * 0.38f,
+            bottom + 10f
         )
 
         leftWing.lineTo(
-            bodyRect.left,
+            body.left,
             bottom - bodyHeight * 0.02f
         )
 
         leftWing.close()
 
-        paint.color = Color.rgb(35, 95, 175)
-        canvas.drawPath(leftWing, paint)
+        canvas.drawPath(
+            leftWing,
+            paint
+        )
 
-        // Prawe skrzydło
         val rightWing = Path()
 
         rightWing.moveTo(
-            bodyRect.right,
-            bottom - bodyHeight * 0.28f
+            body.right,
+            bottom - bodyHeight * 0.30f
         )
 
         rightWing.lineTo(
-            bodyRect.right + widthRocket * 0.36f,
-            bottom + 5f
+            body.right + rocketWidth * 0.38f,
+            bottom + 10f
         )
 
         rightWing.lineTo(
-            bodyRect.right,
+            body.right,
             bottom - bodyHeight * 0.02f
         )
 
         rightWing.close()
 
-        canvas.drawPath(rightWing, paint)
-
-        // Dysza
-        paint.color = Color.rgb(45, 50, 60)
-
-        canvas.drawRect(
-            centerX - bodyWidth * 0.28f,
-            bottom - 5f,
-            centerX + bodyWidth * 0.28f,
-            bottom + 16f,
+        canvas.drawPath(
+            rightWing,
             paint
         )
 
-        // Stage indicator na rakiecie
-        paint.color = Color.WHITE
-        paint.textAlign = Paint.Align.CENTER
-        paint.textSize = bodyWidth * 0.22f
-        paint.typeface = Typeface.DEFAULT_BOLD
+        // Dysza
+        paint.color = Color.rgb(
+            40,
+            45,
+            55
+        )
 
-        canvas.drawText(
-            "S$stage",
-            centerX,
-            bottom - bodyHeight * 0.08f,
+        canvas.drawRect(
+            centerX - bodyWidth * 0.27f,
+            bottom - 4f,
+            centerX + bodyWidth * 0.27f,
+            bottom + 16f,
             paint
         )
     }
@@ -361,15 +579,14 @@ class RocketView @JvmOverloads constructor(
         topY: Float,
         rocketWidth: Float
     ) {
-
         val pulse =
-            (sin(animationTime * 4f) + 1f) / 2f
+            (sin(animationTime * 5f) + 1f) / 2f
 
-        val flameLength =
+        val length =
             rocketWidth *
-                    (0.65f + pulse * 0.45f)
+                    (0.70f + pulse * 0.55f)
 
-        // Zewnętrzny pomarańczowy płomień
+        // Zewnętrzny płomień
         val outer = Path()
 
         outer.moveTo(
@@ -378,23 +595,31 @@ class RocketView @JvmOverloads constructor(
         )
 
         outer.quadTo(
-            centerX - rocketWidth * 0.30f,
-            topY + flameLength * 0.50f,
+            centerX - rocketWidth * 0.32f,
+            topY + length * 0.45f,
             centerX,
-            topY + flameLength
+            topY + length
         )
 
         outer.quadTo(
-            centerX + rocketWidth * 0.30f,
-            topY + flameLength * 0.50f,
+            centerX + rocketWidth * 0.32f,
+            topY + length * 0.45f,
             centerX + rocketWidth * 0.20f,
             topY
         )
 
         outer.close()
 
-        paint.color = Color.rgb(255, 90, 10)
-        canvas.drawPath(outer, paint)
+        paint.color = Color.rgb(
+            255,
+            75,
+            5
+        )
+
+        canvas.drawPath(
+            outer,
+            paint
+        )
 
         // Żółty środek
         val inner = Path()
@@ -406,14 +631,14 @@ class RocketView @JvmOverloads constructor(
 
         inner.quadTo(
             centerX - rocketWidth * 0.16f,
-            topY + flameLength * 0.45f,
+            topY + length * 0.42f,
             centerX,
-            topY + flameLength * 0.75f
+            topY + length * 0.76f
         )
 
         inner.quadTo(
             centerX + rocketWidth * 0.16f,
-            topY + flameLength * 0.45f,
+            topY + length * 0.42f,
             centerX + rocketWidth * 0.11f,
             topY
         )
@@ -421,59 +646,74 @@ class RocketView @JvmOverloads constructor(
         inner.close()
 
         paint.color = Color.YELLOW
-        canvas.drawPath(inner, paint)
 
-        // Biały rdzeń
+        canvas.drawPath(
+            inner,
+            paint
+        )
+
+        // Rdzeń
         paint.color = Color.WHITE
 
         canvas.drawOval(
-            centerX - rocketWidth * 0.055f,
-            topY + 2f,
-            centerX + rocketWidth * 0.055f,
-            topY + flameLength * 0.42f,
+            centerX - rocketWidth * 0.05f,
+            topY,
+            centerX + rocketWidth * 0.05f,
+            topY + length * 0.42f,
             paint
         )
     }
 
-    private fun drawAltitudeIndicator(
+    private fun drawFlightInfo(
         canvas: Canvas,
         rocket: Rocket
     ) {
-
-        val padding = 20f
-
-        paint.color = Color.argb(190, 0, 0, 0)
+        paint.color = Color.argb(
+            185,
+            0,
+            0,
+            0
+        )
 
         canvas.drawRoundRect(
-            padding,
-            15f,
-            width - padding,
-            58f,
-            15f,
-            15f,
+            16f,
+            14f,
+            width - 16f,
+            60f,
+            14f,
+            14f,
             paint
         )
 
-        paint.color = Color.rgb(100, 220, 255)
-        paint.textSize = 18f
-        paint.textAlign = Paint.Align.LEFT
-        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.color = Color.rgb(
+            100,
+            220,
+            255
+        )
+
+        paint.textSize = 17f
+        paint.typeface =
+            Typeface.DEFAULT_BOLD
+
+        paint.textAlign =
+            Paint.Align.LEFT
 
         canvas.drawText(
-            "WYSOKOŚĆ  ${rocket.altitude.toInt()} km",
-            padding + 14f,
-            38f,
+            "WYSOKOŚĆ ${rocket.altitude.toInt()} km",
+            30f,
+            42f,
             paint
         )
 
-        paint.textAlign = Paint.Align.RIGHT
+        paint.textAlign =
+            Paint.Align.RIGHT
 
         paint.color = Color.WHITE
 
         canvas.drawText(
             "STAGE ${rocket.stage}/3",
-            width - padding - 14f,
-            38f,
+            width - 30f,
+            42f,
             paint
         )
     }
