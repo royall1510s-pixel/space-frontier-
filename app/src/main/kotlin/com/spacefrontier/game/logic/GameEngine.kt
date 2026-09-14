@@ -2,6 +2,8 @@ package com.spacefrontier.game.logic
 
 import android.content.Context
 import com.spacefrontier.game.models.GameState
+import com.spacefrontier.game.models.PlanetProgress
+import com.spacefrontier.game.models.PlanetProgressCatalog
 import com.spacefrontier.game.models.Planets
 import com.spacefrontier.game.models.Rocket
 import com.spacefrontier.game.models.RocketCatalog
@@ -33,6 +35,15 @@ class GameEngine(
 
     private val rocketUpgrades =
         mutableMapOf<Int, RocketUpgrade>()
+
+    private val planetProgress =
+        mutableMapOf<String, PlanetProgress>()
+
+    private var currentPlanetIndex =
+        preferences.getInt(
+            "current_planet_index",
+            0
+        )
 
     init {
 
@@ -79,6 +90,86 @@ class GameEngine(
         }
 
         loadRocketUpgrades()
+
+        loadPlanetProgress()
+    }
+
+    private fun loadPlanetProgress() {
+
+        planetProgress.clear()
+
+        PlanetProgressCatalog.all.forEachIndexed { index, planetName ->
+
+            val missionsCompleted =
+                preferences.getInt(
+                    "planet_${index}_missions",
+                    0
+                )
+
+            val unlocked =
+                preferences.getBoolean(
+                    "planet_${index}_unlocked",
+                    index == 0
+                )
+
+            planetProgress[planetName] =
+                PlanetProgress(
+                    planetName = planetName,
+                    unlocked = unlocked,
+                    missionsCompleted = missionsCompleted
+                )
+        }
+
+        planetProgress[
+            PlanetProgressCatalog.all.first()
+        ]?.unlocked = true
+
+        if (
+            currentPlanetIndex !in
+            PlanetProgressCatalog.all.indices
+        ) {
+
+            currentPlanetIndex = 0
+        }
+
+        while (
+            currentPlanetIndex > 0 &&
+            !isPlanetUnlocked(
+                currentPlanetIndex
+            )
+        ) {
+
+            currentPlanetIndex--
+        }
+    }
+
+    private fun savePlanetProgress() {
+
+        val editor =
+            preferences.edit()
+
+        planetProgress.forEachIndexed { index, entry ->
+
+            val progress =
+                entry.value
+
+            editor.putBoolean(
+                "planet_${index}_unlocked",
+                progress.unlocked
+            )
+
+            editor.putInt(
+                "planet_${index}_missions",
+                progress.missionsCompleted
+            )
+        }
+
+        editor.putInt(
+            "current_planet_index",
+            currentPlanetIndex
+        )
+
+        editor.apply()
     }
 
     private fun loadRocketUpgrades() {
@@ -162,6 +253,8 @@ class GameEngine(
         }
 
         editor.apply()
+
+        savePlanetProgress()
     }
 
     fun getGameState(): GameState =
@@ -176,6 +269,7 @@ class GameEngine(
                 )
 
             rocket.copy(
+
                 thrust =
                     rocket.thrust +
                             upgrade.engineBonus,
@@ -470,6 +564,99 @@ class GameEngine(
         return true
     }
 
+    fun getPlanetProgress(): List<PlanetProgress> {
+
+        return PlanetProgressCatalog.all.map { planetName ->
+
+            planetProgress[planetName]
+                ?: PlanetProgress(
+                    planetName = planetName,
+                    unlocked = false,
+                    missionsCompleted = 0
+                )
+        }
+    }
+
+    fun isPlanetUnlocked(
+        planetIndex: Int
+    ): Boolean {
+
+        if (
+            planetIndex !in
+            PlanetProgressCatalog.all.indices
+        ) {
+
+            return false
+        }
+
+        val planetName =
+            PlanetProgressCatalog.all[
+                planetIndex
+            ]
+
+        return planetProgress[
+            planetName
+        ]?.unlocked == true
+    }
+
+    fun getCurrentPlanetIndex(): Int =
+        currentPlanetIndex
+
+    fun getCurrentPlanet(): com.spacefrontier.game.models.Planet? =
+        state.currentPlanet
+
+    private fun completePlanetMission() {
+
+        val planetName =
+            PlanetProgressCatalog.all[
+                currentPlanetIndex
+            ]
+
+        val currentProgress =
+            planetProgress.getOrPut(
+                planetName
+            ) {
+
+                PlanetProgress(
+                    planetName = planetName
+                )
+            }
+
+        currentProgress.missionsCompleted++
+
+        val nextIndex =
+            currentPlanetIndex + 1
+
+        if (
+            nextIndex <
+            PlanetProgressCatalog.all.size
+        ) {
+
+            val nextPlanetName =
+                PlanetProgressCatalog.all[
+                    nextIndex
+                ]
+
+            val nextProgress =
+                planetProgress.getOrPut(
+                    nextPlanetName
+                ) {
+
+                    PlanetProgress(
+                        planetName =
+                            nextPlanetName
+                    )
+                }
+
+            nextProgress.unlocked = true
+
+            currentPlanetIndex =
+                nextIndex
+        }
+
+        savePlanetProgress()
+    }
+
     private fun prepareRocket() {
 
         val template =
@@ -498,8 +685,18 @@ class GameEngine(
 
     private fun choosePlanet() {
 
+        if (
+            currentPlanetIndex !in
+            Planets.all.indices
+        ) {
+
+            currentPlanetIndex = 0
+        }
+
         state.currentPlanet =
-            Planets.all.random()
+            Planets.all[
+                currentPlanetIndex
+            ]
     }
 
     fun handleTap() {
@@ -874,6 +1071,8 @@ class GameEngine(
                 state.totalCoins +=
                     reward
 
+                completePlanetMission()
+
                 saveProgress()
 
             } else {
@@ -908,4 +1107,4 @@ class GameEngine(
         state.gamePhase =
             GameState.GamePhase.AWAITING_FIRST_TAP
     }
-}
+} 
