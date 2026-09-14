@@ -1,0 +1,2 @@
+-keep class com.spacefrontier.game.** { *; }
+-keepnames class com.spacefrontier.game.** { *; }
