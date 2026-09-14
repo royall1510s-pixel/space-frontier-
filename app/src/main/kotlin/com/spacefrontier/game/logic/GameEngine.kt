@@ -8,6 +8,7 @@ class GameEngine {
     private val state = GameState()
 
     private var flightTime = 0f
+    private var landingStartedAltitude = 0f
 
     init {
         choosePlanet()
@@ -48,27 +49,33 @@ class GameEngine {
 
     fun update(deltaTime: Float) {
 
+        val dt = deltaTime.coerceIn(0f, 0.05f)
+
         when (state.gamePhase) {
 
-            GameState.GamePhase.STAGE_1_ACTIVE ->
-                launch(deltaTime, 1)
+            GameState.GamePhase.STAGE_1_ACTIVE -> {
+                launch(dt, 1)
+            }
 
-            GameState.GamePhase.STAGE_2_ACTIVE ->
-                launch(deltaTime, 2)
+            GameState.GamePhase.STAGE_2_ACTIVE -> {
+                launch(dt, 2)
+            }
 
             GameState.GamePhase.STAGE_3_ACTIVE -> {
-                launch(deltaTime, 3)
+                launch(dt, 3)
 
                 if (state.rocket.altitude >= 40f) {
                     state.gamePhase = GameState.GamePhase.IN_FLIGHT
                 }
             }
 
-            GameState.GamePhase.IN_FLIGHT ->
-                fly(deltaTime)
+            GameState.GamePhase.IN_FLIGHT -> {
+                fly(dt)
+            }
 
-            GameState.GamePhase.LANDING_SEQUENCE ->
-                landing(deltaTime)
+            GameState.GamePhase.LANDING_SEQUENCE -> {
+                landing(dt)
+            }
 
             else -> Unit
         }
@@ -99,7 +106,7 @@ class GameEngine {
         rocket.fuel = rocket.fuel.coerceAtLeast(0f)
 
         if (rocket.fuel <= 0f) {
-            state.gamePhase = GameState.GamePhase.LANDING_SEQUENCE
+            startLanding()
         }
     }
 
@@ -110,8 +117,18 @@ class GameEngine {
 
         flightTime += deltaTime
 
+        /*
+         * W locie rakieta stopniowo wytraca prędkość,
+         * ale nadal porusza się do celu.
+         */
         rocket.acceleration = -6f
+
         rocket.velocity += rocket.acceleration * deltaTime
+
+        if (rocket.velocity < 20f) {
+            rocket.velocity = 20f
+        }
+
         rocket.altitude += rocket.velocity * deltaTime
 
         rocket.fuel -= 2f * deltaTime
@@ -122,12 +139,21 @@ class GameEngine {
             rocket.fuel <= 0f ||
             flightTime >= 12f
         ) {
-            state.gamePhase = GameState.GamePhase.LANDING_SEQUENCE
+            startLanding()
         }
+    }
 
-        if (rocket.altitude <= 0f) {
-            rocket.altitude = 0f
-            state.gamePhase = GameState.GamePhase.LANDED_FAILED
+    private fun startLanding() {
+
+        if (state.gamePhase != GameState.GamePhase.LANDING_SEQUENCE) {
+
+            landingStartedAltitude = state.rocket.altitude
+
+            state.gamePhase =
+                GameState.GamePhase.LANDING_SEQUENCE
+
+            state.rocket.velocity =
+                state.rocket.velocity.coerceAtLeast(25f)
         }
     }
 
@@ -136,27 +162,60 @@ class GameEngine {
         val rocket = state.rocket
         val planet = state.currentPlanet ?: return
 
-        rocket.acceleration = -18f
-        rocket.velocity += rocket.acceleration * deltaTime
+        /*
+         * Im wyżej rozpoczęło się lądowanie,
+         * tym dłużej trwa zejście.
+         */
+        val distanceToGround =
+            landingStartedAltitude.coerceAtLeast(1f)
 
-        if (rocket.velocity < -60f) {
-            rocket.velocity = -60f
+        /*
+         * Automatyczne hamowanie.
+         */
+        val brakingForce =
+            12f + (distanceToGround / 100f).coerceAtMost(10f)
+
+        rocket.acceleration = -brakingForce
+
+        rocket.velocity +=
+            rocket.acceleration * deltaTime
+
+        /*
+         * Nie pozwalamy, żeby prędkość rosła
+         * w nieskończoność podczas lądowania.
+         */
+        if (rocket.velocity < -45f) {
+            rocket.velocity = -45f
         }
 
-        rocket.altitude += rocket.velocity * deltaTime
+        rocket.altitude +=
+            rocket.velocity * deltaTime
 
         if (rocket.altitude <= 0f) {
 
             rocket.altitude = 0f
 
-            if (rocket.velocity > -35f) {
+            /*
+             * Udane lądowanie wymaga bezpiecznej
+             * prędkości przy kontakcie z powierzchnią.
+             */
+            if (rocket.velocity >= -35f) {
 
-                state.gamePhase = GameState.GamePhase.LANDED_SUCCESS
+                rocket.velocity = 0f
+                rocket.acceleration = 0f
+
+                state.gamePhase =
+                    GameState.GamePhase.LANDED_SUCCESS
+
                 state.totalCoins += planet.reward
 
             } else {
 
-                state.gamePhase = GameState.GamePhase.LANDED_FAILED
+                rocket.velocity = 0f
+                rocket.acceleration = 0f
+
+                state.gamePhase =
+                    GameState.GamePhase.LANDED_FAILED
             }
         }
     }
@@ -170,6 +229,7 @@ class GameEngine {
         state.rocket.stage = 0
 
         flightTime = 0f
+        landingStartedAltitude = 0f
 
         choosePlanet()
 
