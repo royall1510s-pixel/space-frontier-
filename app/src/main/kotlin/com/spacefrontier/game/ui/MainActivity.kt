@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.GestureDetector
+import android.view.Gravity
 import android.view.MotionEvent
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -15,6 +16,7 @@ import com.spacefrontier.game.databinding.ActivityMainBinding
 import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Rocket
+import com.spacefrontier.game.models.RocketUpgrade
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
@@ -221,6 +223,8 @@ class MainActivity : AppCompatActivity() {
                 soundManager.playCoinReward()
 
                 gameEngine.handleTap()
+
+                setupHangar()
             }
 
             GameState.GamePhase.LANDED_FAILED -> {
@@ -228,6 +232,8 @@ class MainActivity : AppCompatActivity() {
                 soundManager.playLandingFail()
 
                 gameEngine.handleTap()
+
+                setupHangar()
             }
 
             else -> Unit
@@ -333,9 +339,9 @@ class MainActivity : AppCompatActivity() {
             TextView(this)
 
         stats.text =
-            "⚡ ${rocket.thrust.toInt()}  " +
-                    "⛽ ${rocket.maxFuel.toInt()}  " +
-                    "🌍 ${rocket.maxAltitude.toInt()} km"
+            "⚡ ${rocket.thrust.roundToInt()}  " +
+                    "⛽ ${rocket.maxFuel.roundToInt()}  " +
+                    "🌍 ${rocket.maxAltitude.roundToInt()} km"
 
         stats.setTextColor(
             Color.LTGRAY
@@ -358,11 +364,19 @@ class MainActivity : AppCompatActivity() {
             statsParams
         )
 
+        if (rocket.unlocked) {
+
+            addUpgradePanel(
+                card,
+                rocket
+            )
+        }
+
         val action =
             TextView(this)
 
         action.gravity =
-            android.view.Gravity.CENTER
+            Gravity.CENTER
 
         action.setPadding(
             10,
@@ -495,6 +509,228 @@ class MainActivity : AppCompatActivity() {
             )
     }
 
+    private fun addUpgradePanel(
+        card: LinearLayout,
+        rocket: Rocket
+    ) {
+
+        val upgrade =
+            gameEngine.getRocketUpgrade(
+                rocket.id
+            )
+
+        val title =
+            TextView(this)
+
+        title.text =
+            "🔧 ULEPSZENIA"
+
+        title.setTextColor(
+            Color.rgb(
+                255,
+                170,
+                70
+            )
+        )
+
+        title.textSize =
+            13f
+
+        title.setTypeface(
+            null,
+            android.graphics.Typeface.BOLD
+        )
+
+        val titleParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        titleParams.topMargin =
+            10
+
+        card.addView(
+            title,
+            titleParams
+        )
+
+        val row =
+            LinearLayout(this)
+
+        row.orientation =
+            LinearLayout.HORIZONTAL
+
+        row.gravity =
+            Gravity.CENTER
+
+        val rowParams =
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        rowParams.topMargin =
+            6
+
+        card.addView(
+            row,
+            rowParams
+        )
+
+        addUpgradeButton(
+            row,
+            "⚡\nSILNIK\nLv.${upgrade.engineLevel}\n💰 ${upgrade.engineCost}",
+            rocket.id,
+            UpgradeType.ENGINE
+        )
+
+        addUpgradeButton(
+            row,
+            "⛽\nPALIWO\nLv.${upgrade.fuelLevel}\n💰 ${upgrade.fuelCost}",
+            rocket.id,
+            UpgradeType.FUEL
+        )
+
+        addUpgradeButton(
+            row,
+            "🌍\nZASIĘG\nLv.${upgrade.altitudeLevel}\n💰 ${upgrade.altitudeCost}",
+            rocket.id,
+            UpgradeType.ALTITUDE
+        )
+    }
+
+    private enum class UpgradeType {
+        ENGINE,
+        FUEL,
+        ALTITUDE
+    }
+
+    private fun addUpgradeButton(
+        row: LinearLayout,
+        textValue: String,
+        rocketId: Int,
+        type: UpgradeType
+    ) {
+
+        val button =
+            TextView(this)
+
+        button.text =
+            textValue
+
+        button.gravity =
+            Gravity.CENTER
+
+        button.setTextColor(
+            Color.WHITE
+        )
+
+        button.textSize =
+            11f
+
+        button.setPadding(
+            4,
+            8,
+            4,
+            8
+        )
+
+        button.setBackgroundColor(
+            Color.rgb(
+                35,
+                60,
+                85
+            )
+        )
+
+        val params =
+            LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+
+        params.setMargins(
+            3,
+            0,
+            3,
+            0
+        )
+
+        row.addView(
+            button,
+            params
+        )
+
+        button.setOnClickListener {
+
+            val gameState =
+                gameEngine.getGameState()
+
+            val phase =
+                gameState.gamePhase
+
+            if (
+                phase !=
+                GameState.GamePhase.AWAITING_FIRST_TAP &&
+                phase !=
+                GameState.GamePhase.LANDED_SUCCESS &&
+                phase !=
+                GameState.GamePhase.LANDED_FAILED
+            ) {
+
+                Toast.makeText(
+                    this,
+                    "🛑 Zakończ misję przed ulepszaniem.",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                return@setOnClickListener
+            }
+
+            val success =
+                when (type) {
+
+                    UpgradeType.ENGINE ->
+                        gameEngine.upgradeEngine(
+                            rocketId
+                        )
+
+                    UpgradeType.FUEL ->
+                        gameEngine.upgradeFuel(
+                            rocketId
+                        )
+
+                    UpgradeType.ALTITUDE ->
+                        gameEngine.upgradeAltitude(
+                            rocketId
+                        )
+                }
+
+            if (success) {
+
+                setupHangar()
+
+                updateUI()
+
+                Toast.makeText(
+                    this,
+                    "🔧 Ulepszenie zakupione!",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+            } else {
+
+                Toast.makeText(
+                    this,
+                    "💰 Za mało monet!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
     private fun startGameLoop() {
 
         lastUpdateTime =
@@ -536,14 +772,8 @@ class MainActivity : AppCompatActivity() {
                 binding.rewardBalance.text =
                     "SALDO: 💰 ${gameState.totalCoins}"
 
-                if (
-                    lastShownReward !=
+                lastShownReward =
                     gameState.missionReward
-                ) {
-
-                    lastShownReward =
-                        gameState.missionReward
-                }
             }
 
             GameState.GamePhase.LANDED_FAILED -> {
@@ -605,7 +835,7 @@ class MainActivity : AppCompatActivity() {
             "${rocket.altitude.roundToInt()} km"
 
         binding.fuelText.text =
-            "${rocket.fuel.roundToInt()}%"
+            "${rocket.fuel.roundToInt()}"
 
         binding.stageIndicator.text =
             when (
@@ -641,7 +871,7 @@ class MainActivity : AppCompatActivity() {
 
             binding.planetInfo.text =
                 "${planet.emoji} ${planet.name} • " +
-                        "Cel: ${planet.targetAltitude.toInt()} km"
+                        "Cel: ${planet.targetAltitude.roundToInt()} km"
         }
 
         binding.statusText.text =
