@@ -85,8 +85,6 @@
 
     </ScrollView>
 
-    <!-- PARAMETRY AKTUALNEJ RAKIETY -->
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -153,6 +151,63 @@
         android:textSize="17sp"
         android:textStyle="bold" />
 
+    <LinearLayout
+        android:id="@+id/rewardPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="10dp"
+        android:background="#12253A"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/rewardTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="🏆 MISJA UDANA!"
+            android:textColor="#55FFAA"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rewardPlanet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="3dp"
+            android:text="🌙 LUNA"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/rewardAmount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="3dp"
+            android:text="💰 +100 MONET"
+            android:textColor="#FFD54A"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rewardBalance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="2dp"
+            android:text="SALDO: 💰 100"
+            android:textColor="#CCCCCC"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
     <TextView
         android:id="@+id/tapHintText"
         android:layout_width="match_parent"
@@ -168,4 +223,4 @@
         android:textSize="19sp"
         android:textStyle="bold" />
 
-</LinearLayout>
+</LinearLayout> 
