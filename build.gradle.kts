@@ -1,5 +1,4 @@
-org.gradle.jvmargs=-Xmx2048m -XX:MaxPermSize=512m
-org.gradle.parallel=true
-kotlin.code.style=official
-android.useAndroidX=true
-android.enableJetifier=true
+plugins {
+    id("com.android.application") version "8.1.0" apply false
+    kotlin("android") version "1.9.10" apply false
+} 
