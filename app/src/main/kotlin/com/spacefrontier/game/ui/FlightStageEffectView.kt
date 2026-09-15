@@ -15,7 +15,6 @@ import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.random.Random
 
 class FlightStageEffectView(
     context: Context
@@ -39,51 +38,48 @@ class FlightStageEffectView(
     private val textPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val separatorPaint =
+    private val separationPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private var phase:
+    private var gamePhase:
             GameState.GamePhase? = null
 
-    private var previousStage =
+    private var stage =
         0
 
-    private var stage =
+    private var previousStage =
         0
 
     private var animationTime =
         0f
 
-    private var separationAnimation =
+    private var separationTime =
         0f
 
-    private var showSeparation =
+    private var separationVisible =
         false
-
-    private val random =
-        Random(System.currentTimeMillis())
 
     private val updateRunnable =
         object : Runnable {
 
             override fun run() {
 
-                readGameState()
+                updateGameState()
 
                 animationTime +=
-                    0.12f
+                    0.10f
 
-                if (showSeparation) {
+                if (separationVisible) {
 
-                    separationAnimation +=
-                        0.08f
+                    separationTime +=
+                        0.10f
 
                     if (
-                        separationAnimation >=
-                        1.0f
+                        separationTime >=
+                        1f
                     ) {
 
-                        showSeparation =
+                        separationVisible =
                             false
                     }
                 }
@@ -107,7 +103,7 @@ class FlightStageEffectView(
         textPaint.typeface =
             Typeface.DEFAULT_BOLD
 
-        separatorPaint.typeface =
+        separationPaint.typeface =
             Typeface.DEFAULT_BOLD
 
         handler.post(
@@ -144,7 +140,7 @@ class FlightStageEffectView(
         }
     }
 
-    private fun readGameState() {
+    private fun updateGameState() {
 
         val engine =
             getGameEngine()
@@ -153,7 +149,7 @@ class FlightStageEffectView(
         val state =
             engine.getGameState()
 
-        phase =
+        gamePhase =
             state.gamePhase
 
         val newStage =
@@ -182,10 +178,10 @@ class FlightStageEffectView(
             previousStage > 0
         ) {
 
-            showSeparation =
+            separationVisible =
                 true
 
-            separationAnimation =
+            separationTime =
                 0f
         }
 
@@ -209,118 +205,110 @@ class FlightStageEffectView(
             canvas
         )
 
-        val currentPhase =
-            phase
+        if (
+            stage <= 0
+        ) {
+            return
+        }
 
         if (
-            currentPhase ==
+            gamePhase ==
             GameState.GamePhase.LANDING_SEQUENCE ||
-            currentPhase ==
+            gamePhase ==
             GameState.GamePhase.LANDED_SUCCESS ||
-            currentPhase ==
+            gamePhase ==
             GameState.GamePhase.LANDED_FAILED
         ) {
-
-            return
-        }
-
-        if (stage <= 0) {
-
-            return
-        }
-
-        if (
-            currentPhase !=
-            GameState.GamePhase.STAGE_1_ACTIVE &&
-            currentPhase !=
-            GameState.GamePhase.STAGE_2_ACTIVE &&
-            currentPhase !=
-            GameState.GamePhase.STAGE_3_ACTIVE &&
-            currentPhase !=
-            GameState.GamePhase.IN_FLIGHT
-        ) {
-
             return
         }
 
         val centerX =
             width / 2f
 
-        val rocketBottom =
+        val engineY =
             height * 0.72f
 
         val power =
             when (stage) {
 
-                1 -> 1.0f
-                2 -> 1.45f
-                else -> 2.0f
+                1 ->
+                    1.0f
+
+                2 ->
+                    1.45f
+
+                else ->
+                    2.0f
             }
 
-        drawStageIndicator(
+        drawStageLabel(
             canvas,
             centerX
         )
 
-        drawEngineGlow(
+        drawGlow(
             canvas,
             centerX,
-            rocketBottom,
+            engineY,
             power
         )
 
         drawFlame(
             canvas,
             centerX,
-            rocketBottom,
+            engineY,
             power
         )
 
         drawParticles(
             canvas,
             centerX,
-            rocketBottom,
+            engineY,
             power
         )
 
-        if (stage >= 3) {
+        if (
+            stage >= 3
+        ) {
 
-            drawOverloadGlow(
+            drawMaximumThrustGlow(
                 canvas,
                 centerX,
-                rocketBottom
+                engineY
             )
         }
 
-        if (showSeparation) {
+        if (
+            separationVisible
+        ) {
 
-            drawStageSeparation(
+            drawStageChange(
                 canvas,
                 centerX,
-                rocketBottom
+                engineY
             )
         }
     }
 
-    private fun drawStageIndicator(
+    private fun drawStageLabel(
         canvas: Canvas,
         centerX: Float
     ) {
 
-        val stageText =
+        val title =
             when (stage) {
 
                 1 ->
-                    "STAGE 1  •  START"
+                    "STAGE 1 • START"
 
                 2 ->
-                    "STAGE 2  •  BOOST"
+                    "STAGE 2 • BOOST"
 
                 else ->
-                    "STAGE 3  •  MAX THRUST"
+                    "STAGE 3 • MAX THRUST"
             }
 
-        val powerText =
+        val thrust =
             when (stage) {
 
                 1 ->
@@ -349,7 +337,7 @@ class FlightStageEffectView(
                     Color.rgb(
                         255,
                         210,
-                        80
+                        70
                     )
 
                 else ->
@@ -361,7 +349,7 @@ class FlightStageEffectView(
             }
 
         canvas.drawText(
-            stageText,
+            title,
             centerX,
             34f,
             textPaint
@@ -378,7 +366,7 @@ class FlightStageEffectView(
             )
 
         canvas.drawText(
-            powerText,
+            thrust,
             centerX,
             53f,
             textPaint
@@ -388,7 +376,7 @@ class FlightStageEffectView(
             Paint.Align.LEFT
     }
 
-    private fun drawEngineGlow(
+    private fun drawGlow(
         canvas: Canvas,
         centerX: Float,
         centerY: Float,
@@ -398,14 +386,13 @@ class FlightStageEffectView(
         val pulse =
             (
                 sin(
-                    animationTime * 5.0
-                ) *
-                    0.12f +
+                    animationTime * 5f
+                ) * 0.12f +
                     0.88f
                 ).toFloat()
 
         val radius =
-            45f *
+            42f *
                     power *
                     pulse
 
@@ -422,7 +409,7 @@ class FlightStageEffectView(
                         30
                     ),
                     Color.argb(
-                        90,
+                        80,
                         255,
                         70,
                         10
@@ -458,18 +445,17 @@ class FlightStageEffectView(
         val pulse =
             (
                 sin(
-                    animationTime * 8.0
-                ) *
-                    0.10f +
+                    animationTime * 8f
+                ) * 0.10f +
                     1f
                 ).toFloat()
 
-        val flameLength =
-            65f *
+        val length =
+            60f *
                     power *
                     pulse
 
-        val flameWidth =
+        val width =
             18f *
                     power
 
@@ -479,7 +465,7 @@ class FlightStageEffectView(
                 1 ->
                     Color.rgb(
                         255,
-                        125,
+                        130,
                         20
                     )
 
@@ -493,26 +479,327 @@ class FlightStageEffectView(
                 else ->
                     Color.rgb(
                         255,
-                        60,
+                        55,
                         10
                     )
             }
 
-        val flamePath =
+        val path =
             android.graphics.Path()
 
-        flamePath.moveTo(
-            centerX -
-                    flameWidth,
+        path.moveTo(
+            centerX - width,
             centerY
         )
 
-        flamePath.cubicTo(
-            centerX -
-                    flameWidth * 0.8f,
-            centerY +
-                    flameLength * 0.35f,
+        path.cubicTo(
+            centerX - width * 0.85f,
+            centerY + length * 0.30f,
 
-            centerX -
-                    flameWidth * 0.55f,
-            center
+            centerX - width * 0.55f,
+            centerY + length * 0.80f,
+
+            centerX,
+            centerY + length
+        )
+
+        path.cubicTo(
+            centerX + width * 0.55f,
+            centerY + length * 0.80f,
+
+            centerX + width * 0.85f,
+            centerY + length * 0.30f,
+
+            centerX + width,
+            centerY
+        )
+
+        path.close()
+
+        canvas.drawPath(
+            path,
+            flamePaint
+        )
+
+        val coreLength =
+            length * 0.62f
+
+        corePaint.color =
+            Color.rgb(
+                255,
+                245,
+                170
+            )
+
+        val core =
+            android.graphics.Path()
+
+        core.moveTo(
+            centerX - width * 0.40f,
+            centerY
+        )
+
+        core.cubicTo(
+            centerX - width * 0.25f,
+            centerY + coreLength * 0.35f,
+
+            centerX - width * 0.15f,
+            centerY + coreLength * 0.75f,
+
+            centerX,
+            centerY + coreLength
+        )
+
+        core.cubicTo(
+            centerX + width * 0.15f,
+            centerY + coreLength * 0.75f,
+
+            centerX + width * 0.25f,
+            centerY + coreLength * 0.35f,
+
+            centerX + width * 0.40f,
+            centerY
+        )
+
+        core.close()
+
+        canvas.drawPath(
+            core,
+            corePaint
+        )
+    }
+
+    private fun drawParticles(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        power: Float
+    ) {
+
+        particlePaint.color =
+            Color.argb(
+                125,
+                190,
+                210,
+                230
+            )
+
+        val count =
+            when (stage) {
+
+                1 ->
+                    5
+
+                2 ->
+                    10
+
+                else ->
+                    16
+            }
+
+        for (
+            index in 0 until count
+        ) {
+
+            val movement =
+                animationTime *
+                    5f +
+                    index *
+                    1.7f
+
+            val spread =
+                sin(
+                    movement
+                ) *
+                    25f *
+                    power
+
+            val fall =
+                (
+                    animationTime *
+                        100f +
+                        index *
+                        23f
+                    ) %
+                    (
+                        100f *
+                            power
+                    )
+
+            val x =
+                centerX +
+                    spread
+
+            val y =
+                centerY +
+                    25f +
+                    fall
+
+            val radius =
+                2f +
+                    (
+                        index %
+                            3
+                    )
+
+            canvas.drawCircle(
+                x.toFloat(),
+                y.toFloat(),
+                radius.toFloat(),
+                particlePaint
+            )
+        }
+    }
+
+    private fun drawMaximumThrustGlow(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float
+    ) {
+
+        val pulse =
+            (
+                sin(
+                    animationTime * 14f
+                ) * 0.5f +
+                    0.5f
+                ).toFloat()
+
+        val radius =
+            60f +
+                pulse * 25f
+
+        glowPaint.shader =
+            RadialGradient(
+                centerX,
+                centerY,
+                radius,
+                intArrayOf(
+                    Color.argb(
+                        120,
+                        70,
+                        190,
+                        255
+                    ),
+                    Color.argb(
+                        55,
+                        30,
+                        100,
+                        255
+                    ),
+                    Color.TRANSPARENT
+                ),
+                floatArrayOf(
+                    0f,
+                    0.5f,
+                    1f
+                ),
+                Shader.TileMode.CLAMP
+            )
+
+        canvas.drawCircle(
+            centerX,
+            centerY,
+            radius,
+            glowPaint
+        )
+
+        glowPaint.shader =
+            null
+    }
+
+    private fun drawStageChange(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float
+    ) {
+
+        val progress =
+            separationTime
+                .coerceIn(
+                    0f,
+                    1f
+                )
+
+        val alpha =
+            (
+                (1f - progress) *
+                    255f
+                ).toInt()
+                .coerceIn(
+                    0,
+                    255
+                )
+
+        val radius =
+            35f +
+                progress * 130f
+
+        separationPaint.style =
+            Paint.Style.STROKE
+
+        separationPaint.strokeWidth =
+            4f
+
+        separationPaint.color =
+            Color.argb(
+                alpha,
+                100,
+                210,
+                255
+            )
+
+        canvas.drawCircle(
+            centerX,
+            centerY,
+            radius,
+            separationPaint
+        )
+
+        separationPaint.style =
+            Paint.Style.FILL
+
+        separationPaint.textAlign =
+            Paint.Align.CENTER
+
+        separationPaint.textSize =
+            22f
+
+        separationPaint.color =
+            Color.argb(
+                alpha,
+                255,
+                255,
+                255
+            )
+
+        canvas.drawText(
+            "STAGE SEPARATION",
+            centerX,
+            centerY - 35f,
+            separationPaint
+        )
+
+        separationPaint.textSize =
+            14f
+
+        canvas.drawText(
+            "ZMIANA STOPNIA",
+            centerX,
+            centerY - 10f,
+            separationPaint
+        )
+
+        separationPaint.textAlign =
+            Paint.Align.LEFT
+    }
+
+    override fun onDetachedFromWindow() {
+
+        handler.removeCallbacks(
+            updateRunnable
+        )
+
+        super.onDetachedFromWindow()
+    }
+}
