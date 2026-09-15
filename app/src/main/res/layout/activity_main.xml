@@ -49,12 +49,26 @@
         android:textSize="15sp"
         android:textStyle="bold" />
 
-    <com.spacefrontier.game.graphics.RocketView
-        android:id="@+id/rocketView"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="2.0"
-        android:background="#061225" />
+        android:background="#061225">
+
+        <com.spacefrontier.game.graphics.RocketView
+            android:id="@+id/rocketView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#061225" />
+
+        <com.spacefrontier.game.ui.FlightStageEffectView
+            android:id="@+id/flightStageEffect"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="false"
+            android:focusable="false" />
+
+    </FrameLayout>
 
     <com.spacefrontier.game.ui.FlightHudView
         android:id="@+id/flightHud"
