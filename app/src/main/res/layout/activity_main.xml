@@ -75,6 +75,20 @@
             android:clickable="false"
             android:focusable="false" />
 
+        <com.spacefrontier.game.ui.FlightNavigationView
+            android:id="@+id/flightNavigationView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="false"
+            android:focusable="false" />
+
+        <com.spacefrontier.game.ui.AtmosphericEntryView
+            android:id="@+id/atmosphericEntryView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="false"
+            android:focusable="false" />
+
         <com.spacefrontier.game.ui.LandingEffectsView
             android:id="@+id/landingEffectsView"
             android:layout_width="match_parent"
