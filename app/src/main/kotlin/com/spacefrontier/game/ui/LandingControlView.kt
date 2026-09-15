@@ -10,7 +10,6 @@ import android.view.MotionEvent
 import android.view.View
 import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
-import kotlin.math.max
 import kotlin.math.min
 
 class LandingControlView(
@@ -47,6 +46,22 @@ class LandingControlView(
     private var parachuteOpened =
         false
 
+    private val updateRunnable =
+        object : Runnable {
+
+            override fun run() {
+
+                updateState()
+
+                invalidate()
+
+                postDelayed(
+                    this,
+                    80
+                )
+            }
+        }
+
     init {
 
         setLayerType(
@@ -69,28 +84,13 @@ class LandingControlView(
         borderPaint.strokeWidth =
             4f
 
-        isClickable = true
+        isClickable =
+            true
 
         post(
             updateRunnable
         )
     }
-
-    private val updateRunnable =
-        object : Runnable {
-
-            override fun run() {
-
-                updateState()
-
-                invalidate()
-
-                postDelayed(
-                    this,
-                    80
-                )
-            }
-        }
 
     private fun getGameEngine():
         GameEngine? {
@@ -144,8 +144,11 @@ class LandingControlView(
             GameState.GamePhase.LANDING_SEQUENCE
         ) {
 
-            brakePower = 0f
-            parachuteOpened = false
+            brakePower =
+                0f
+
+            parachuteOpened =
+                false
         }
     }
 
@@ -307,10 +310,12 @@ class LandingControlView(
             )
 
         val left =
-            centerX - barWidth / 2f
+            centerX -
+                barWidth / 2f
 
         val right =
-            centerX + barWidth / 2f
+            centerX +
+                barWidth / 2f
 
         val progress =
             min(
@@ -521,26 +526,37 @@ class LandingControlView(
         val centerX =
             width / 2f
 
-        val buttonY =
-            height - 3f
-
         val brakeX =
             centerX - 85f
 
         val parachuteX =
             centerX + 85f
 
+        val brakeTop =
+            height - 175f
+
+        val brakeBottom =
+            height - 95f
+
         val brakePressed =
-            event.x >= brakeX - 80f &&
-            event.x <= brakeX + 80f &&
-            event.y >= buttonY - 150f &&
-            event.y <= buttonY - 70f
+            event.x >=
+                brakeX - 80f &&
+            event.x <=
+                brakeX + 80f &&
+            event.y >=
+                brakeTop &&
+            event.y <=
+                brakeBottom
 
         val parachutePressed =
-            event.x >= parachuteX - 80f &&
-            event.x <= parachuteX + 80f &&
-            event.y >= buttonY - 150f &&
-            event.y <= buttonY - 70f
+            event.x >=
+                parachuteX - 80f &&
+            event.x <=
+                parachuteX + 80f &&
+            event.y >=
+                brakeTop &&
+            event.y <=
+                brakeBottom
 
         when {
 
@@ -551,8 +567,11 @@ class LandingControlView(
                         event.action ==
                         MotionEvent.ACTION_UP
                     ) {
+
                         0f
+
                     } else {
+
                         1f
                     }
 
