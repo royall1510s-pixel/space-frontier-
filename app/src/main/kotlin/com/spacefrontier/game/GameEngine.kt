@@ -498,7 +498,8 @@ class GameEngine(
         if (
             !RocketProgression.canPurchase(
                 rocketId = rocketId,
-                unlockedRocketIds = unlockedRocketIds
+                unlockedRocketIds =
+                    unlockedRocketIds
             )
         ) {
             return false
@@ -510,7 +511,8 @@ class GameEngine(
             return false
         }
 
-        state.totalCoins -= rocket.price
+        state.totalCoins -=
+            rocket.price
 
         unlockedRocketIds.add(
             rocketId
@@ -644,9 +646,11 @@ class GameEngine(
 
         prepareRocket()
 
-        flightTime = 0f
+        flightTime =
+            0f
 
-        landingStartedAltitude = 0f
+        landingStartedAltitude =
+            0f
 
         state.gamePhase =
             GameState.GamePhase.AWAITING_FIRST_TAP
@@ -712,12 +716,23 @@ class GameEngine(
 
         state.rocket =
             template.copy(
-                fuel = template.maxFuel,
-                altitude = 0f,
-                velocity = 0f,
-                acceleration = 0f,
-                stage = 0,
-                unlocked = true
+                fuel =
+                    template.maxFuel,
+
+                altitude =
+                    0f,
+
+                velocity =
+                    0f,
+
+                acceleration =
+                    0f,
+
+                stage =
+                    0,
+
+                unlocked =
+                    true
             )
 
         state.missionReward =
@@ -750,7 +765,8 @@ class GameEngine(
                 state.gamePhase =
                     GameState.GamePhase.STAGE_1_ACTIVE
 
-                state.rocket.stage = 1
+                state.rocket.stage =
+                    1
             }
 
             GameState.GamePhase.STAGE_1_ACTIVE -> {
@@ -758,7 +774,8 @@ class GameEngine(
                 state.gamePhase =
                     GameState.GamePhase.STAGE_2_ACTIVE
 
-                state.rocket.stage = 2
+                state.rocket.stage =
+                    2
             }
 
             GameState.GamePhase.STAGE_2_ACTIVE -> {
@@ -766,7 +783,8 @@ class GameEngine(
                 state.gamePhase =
                     GameState.GamePhase.STAGE_3_ACTIVE
 
-                state.rocket.stage = 3
+                state.rocket.stage =
+                    3
             }
 
             GameState.GamePhase.LANDED_SUCCESS,
@@ -839,58 +857,41 @@ class GameEngine(
         val rocket =
             state.rocket
 
-        val baseThrust =
-            rocket.thrust
-
-        val thrust =
-            when (stage) {
-
-                1 -> baseThrust
-
-                2 ->
-                    baseThrust * 1.45f
-
-                else ->
-                    baseThrust * 2.0f
-            }
-
         val mission =
             getCurrentPlanetMission()
 
-        val fuelConsumption =
-            when (stage) {
+        val step =
+            FlightController.launch(
+                rocket =
+                    rocket,
 
-                1 -> 4f
+                mission =
+                    mission,
 
-                2 -> 6f
+                stage =
+                    stage,
 
-                else -> 8f
-            } * mission.fuelMultiplier
-
-        rocket.acceleration =
-            thrust
-
-        rocket.velocity +=
-            rocket.acceleration *
+                deltaTime =
                     deltaTime
-
-        rocket.altitude +=
-            rocket.velocity *
-                    deltaTime
-
-        rocket.fuel -=
-            fuelConsumption *
-                    deltaTime
-
-        rocket.fuel =
-            rocket.fuel.coerceAtLeast(
-                0f
             )
 
+        rocket.acceleration =
+            step.acceleration
+
+        rocket.velocity =
+            step.velocity
+
+        rocket.altitude =
+            step.altitude
+
+        rocket.fuel =
+            step.fuel
+
         if (
-            rocket.fuel <= 0f
+            step.fuelStatus.isEmpty
         ) {
             startLanding()
+            return
         }
 
         if (
@@ -918,38 +919,36 @@ class GameEngine(
         flightTime +=
             deltaTime
 
+        val step =
+            FlightController.fly(
+                rocket =
+                    rocket,
+
+                mission =
+                    mission,
+
+                deltaTime =
+                    deltaTime
+            )
+
         rocket.acceleration =
-            -6f
+            step.acceleration
 
-        rocket.velocity +=
-            rocket.acceleration *
-                    deltaTime
+        rocket.velocity =
+            step.velocity
 
-        if (
-            rocket.velocity < 20f
-        ) {
-            rocket.velocity = 20f
-        }
-
-        rocket.altitude +=
-            rocket.velocity *
-                    deltaTime
-
-        rocket.fuel -=
-            2f *
-                    mission.fuelMultiplier *
-                    deltaTime
+        rocket.altitude =
+            step.altitude
 
         rocket.fuel =
-            rocket.fuel.coerceAtLeast(
-                0f
-            )
+            step.fuel
 
         if (
             rocket.altitude >=
             planet.targetAltitude ||
-            rocket.fuel <= 0f ||
-            flightTime >= 12f
+            step.fuelStatus.isEmpty ||
+            flightTime >=
+            FlightBalance.FLIGHT_TIME_LIMIT
         ) {
             startLanding()
         }
@@ -988,66 +987,42 @@ class GameEngine(
         val rocket =
             state.rocket
 
-        val baseReward =
-            planet.reward
-
-        val rocketBonus =
-            when {
-
-                rocket.id >= 20 ->
-                    1000
-
-                rocket.id >= 18 ->
-                    700
-
-                rocket.id >= 15 ->
-                    500
-
-                rocket.id >= 12 ->
-                    300
-
-                rocket.id >= 9 ->
-                    200
-
-                rocket.id >= 6 ->
-                    100
-
-                else ->
-                    0
-            }
-
         val upgrade =
-            getRocketUpgrade(
-                rocket.id
-            )
+            rocketUpgrades[
+                selectedRocketId
+            ]
 
-        val upgradeBonus =
-            (
-                upgrade.engineLevel +
-                        upgrade.fuelLevel +
-                        upgrade.altitudeLevel
-                ) * 25
+        val engineLevel =
+            upgrade?.engineLevel ?: 0
 
-        val altitudeBonus =
-            (
-                rocket.altitude /
-                        100f
-                ).toInt() * 10
+        val fuelLevel =
+            upgrade?.fuelLevel ?: 0
 
-        val multipliedReward =
-            (
-                baseReward +
-                        rocketBonus +
-                        upgradeBonus +
-                        altitudeBonus
-                ) *
-                    mission.rewardMultiplier
+        val altitudeLevel =
+            upgrade?.altitudeLevel ?: 0
 
-        return multipliedReward
-            .toInt()
-            .coerceAtLeast(
-                baseReward
-            )
+        return EconomyBalance.missionReward(
+            planetReward =
+                planet.reward,
+
+            rocketId =
+                selectedRocketId,
+
+            engineLevel =
+                engineLevel,
+
+            fuelLevel =
+                fuelLevel,
+
+            altitudeLevel =
+                altitudeLevel,
+
+            altitude =
+                rocket.altitude,
+
+            missionRewardMultiplier =
+                mission.rewardMultiplier
+        )
     }
 
     private fun landing(
@@ -1057,80 +1032,89 @@ class GameEngine(
         val rocket =
             state.rocket
 
+        val dt =
+            deltaTime.coerceIn(
+                0f,
+                0.05f
+            )
+
+        val acceleration =
+            FlightController.landingAcceleration(
+                landingStartedAltitude
+            )
+
         rocket.acceleration =
-            -(
-                12f +
-                        (
-                            landingStartedAltitude /
-                                    100f
-                            ).coerceAtMost(
-                                10f
-                            )
-                )
+            acceleration
 
         rocket.velocity +=
-            rocket.acceleration *
-                    deltaTime
+            acceleration *
+                    dt
 
-        if (
-            rocket.velocity < -45f
-        ) {
-            rocket.velocity = -45f
-        }
+        rocket.velocity =
+            rocket.velocity.coerceAtLeast(
+                -FlightBalance.MAX_LANDING_VELOCITY
+            )
 
         rocket.altitude +=
             rocket.velocity *
-                    deltaTime
+                    dt
 
         if (
-            rocket.altitude <= 0f
+            rocket.altitude > 0f
+        ) {
+            return
+        }
+
+        rocket.altitude =
+            0f
+
+        val safeVelocity =
+            FlightController.landingVelocityLimit(
+                landingStartedAltitude
+            )
+
+        if (
+            kotlin.math.abs(
+                rocket.velocity
+            ) <=
+            safeVelocity
         ) {
 
-            rocket.altitude = 0f
+            state.gamePhase =
+                GameState.GamePhase.LANDED_SUCCESS
 
-            if (
-                rocket.velocity >= -35f
-            ) {
+            val reward =
+                calculateMissionReward()
 
-                rocket.velocity = 0f
-                rocket.acceleration = 0f
+            state.missionReward =
+                reward
 
-                val reward =
-                    calculateMissionReward()
+            state.totalCoins +=
+                reward
 
-                state.missionReward =
-                    reward
+            completePlanetMission()
 
-                state.gamePhase =
-                    GameState.GamePhase.LANDED_SUCCESS
+        } else {
 
-                state.totalCoins +=
-                    reward
+            state.gamePhase =
+                GameState.GamePhase.LANDED_FAILED
 
-                completePlanetMission()
-
-                saveProgress()
-
-            } else {
-
-                rocket.velocity = 0f
-                rocket.acceleration = 0f
-
-                state.missionReward = 0
-
-                state.gamePhase =
-                    GameState.GamePhase.LANDED_FAILED
-            }
+            state.missionReward =
+                0
         }
+
+        saveProgress()
     }
 
-    private fun reset() {
+    fun reset() {
 
         prepareRocket()
 
-        flightTime = 0f
+        flightTime =
+            0f
 
-        landingStartedAltitude = 0f
+        landingStartedAltitude =
+            0f
 
         choosePlanet()
 
