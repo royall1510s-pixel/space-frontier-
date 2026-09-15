@@ -5,16 +5,15 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import com.spacefrontier.game.logic.FlightController
 import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
-import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 
 class LandingEffectsView(
     context: Context
@@ -23,29 +22,26 @@ class LandingEffectsView(
     private val handler =
         Handler(Looper.getMainLooper())
 
-    private val glowPaint =
-        Paint(Paint.ANTI_ALIAS_FLAG)
-
     private val parachutePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
     private val parachuteLinePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val zonePaint =
+    private val trajectoryPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val zoneBorderPaint =
+    private val landingZonePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val markerPaint =
+    private val glowPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val particlePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
     private val textPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
-
-    private val path =
-        Path()
 
     private var phase:
         GameState.GamePhase? = null
@@ -59,6 +55,18 @@ class LandingEffectsView(
     private var animationTime =
         0f
 
+    private val particles =
+        ArrayList<Particle>()
+
+    private data class Particle(
+        var x: Float,
+        var y: Float,
+        var vx: Float,
+        var vy: Float,
+        var life: Float,
+        var size: Float
+    )
+
     private val updateRunnable =
         object : Runnable {
 
@@ -69,11 +77,13 @@ class LandingEffectsView(
                 animationTime +=
                     0.08f
 
+                updateParticles()
+
                 invalidate()
 
                 handler.postDelayed(
                     this,
-                    50
+                    40
                 )
             }
         }
@@ -85,8 +95,8 @@ class LandingEffectsView(
             null
         )
 
-        textPaint.typeface =
-            Typeface.DEFAULT_BOLD
+        parachutePaint.style =
+            Paint.Style.FILL
 
         parachuteLinePaint.style =
             Paint.Style.STROKE
@@ -94,11 +104,23 @@ class LandingEffectsView(
         parachuteLinePaint.strokeWidth =
             3f
 
-        zoneBorderPaint.style =
+        trajectoryPaint.style =
             Paint.Style.STROKE
 
-        zoneBorderPaint.strokeWidth =
+        trajectoryPaint.strokeWidth =
             4f
+
+        landingZonePaint.style =
+            Paint.Style.FILL
+
+        glowPaint.style =
+            Paint.Style.FILL
+
+        particlePaint.style =
+            Paint.Style.FILL
+
+        textPaint.typeface =
+            Typeface.DEFAULT_BOLD
 
         handler.post(
             updateRunnable
@@ -153,6 +175,105 @@ class LandingEffectsView(
             state.rocket.velocity
     }
 
+    private fun updateParticles() {
+
+        val currentPhase =
+            phase
+
+        if (
+            currentPhase !=
+            GameState.GamePhase.LANDING_SEQUENCE &&
+            currentPhase !=
+            GameState.GamePhase.LANDED_SUCCESS &&
+            currentPhase !=
+            GameState.GamePhase.LANDED_FAILED
+        ) {
+
+            particles.clear()
+
+            return
+        }
+
+        for (
+            particle in particles
+        ) {
+
+            particle.x +=
+                particle.vx
+
+            particle.y +=
+                particle.vy
+
+            particle.vy +=
+                0.08f
+
+            particle.life -=
+                0.035f
+        }
+
+        particles.removeAll {
+            it.life <= 0f
+        }
+
+        if (
+            currentPhase ==
+            GameState.GamePhase.LANDING_SEQUENCE
+        ) {
+
+            repeat(2) {
+
+                if (
+                    particles.size < 45
+                ) {
+
+                    particles.add(
+                        createParticle()
+                    )
+                }
+            }
+        }
+    }
+
+    private fun createParticle():
+        Particle {
+
+        val centerX =
+            width / 2f
+
+        val centerY =
+            height * 0.72f
+
+        val angle =
+            Random.nextFloat() *
+                Math.PI.toFloat() *
+                2f
+
+        val speed =
+            0.5f +
+                Random.nextFloat() * 2.5f
+
+        return Particle(
+            x =
+                centerX +
+                    Random.nextFloat() * 100f -
+                    50f,
+            y =
+                centerY +
+                    Random.nextFloat() * 20f,
+            vx =
+                cos(angle) * speed,
+            vy =
+                sin(angle) * speed -
+                    1.5f,
+            life =
+                0.6f +
+                    Random.nextFloat() * 0.8f,
+            size =
+                2f +
+                    Random.nextFloat() * 5f
+        )
+    }
+
     override fun onDraw(
         canvas: Canvas
     ) {
@@ -161,26 +282,71 @@ class LandingEffectsView(
             canvas
         )
 
-        when (phase) {
+        val currentPhase =
+            phase
+
+        if (
+            currentPhase !=
+            GameState.GamePhase.LANDING_SEQUENCE &&
+            currentPhase !=
+            GameState.GamePhase.LANDED_SUCCESS &&
+            currentPhase !=
+            GameState.GamePhase.LANDED_FAILED
+        ) {
+
+            return
+        }
+
+        val centerX =
+            width / 2f
+
+        val rocketY =
+            height * 0.43f
+
+        when (currentPhase) {
 
             GameState.GamePhase.LANDING_SEQUENCE -> {
 
-                drawLandingEffects(
+                drawLandingZone(
+                    canvas,
+                    centerX
+                )
+
+                drawTrajectory(
+                    canvas,
+                    centerX,
+                    rocketY
+                )
+
+                drawParachute(
+                    canvas,
+                    centerX,
+                    rocketY
+                )
+
+                drawParticles(
                     canvas
+                )
+
+                drawVelocityIndicator(
+                    canvas,
+                    centerX
                 )
             }
 
             GameState.GamePhase.LANDED_SUCCESS -> {
 
                 drawSuccessEffect(
-                    canvas
+                    canvas,
+                    centerX
                 )
             }
 
             GameState.GamePhase.LANDED_FAILED -> {
 
                 drawFailureEffect(
-                    canvas
+                    canvas,
+                    centerX
                 )
             }
 
@@ -188,485 +354,13 @@ class LandingEffectsView(
         }
     }
 
-    private fun drawLandingEffects(
-        canvas: Canvas
+    private fun drawLandingZone(
+        canvas: Canvas,
+        centerX: Float
     ) {
-
-        val centerX =
-            width / 2f
-
-        val centerY =
-            height / 2f
-
-        val safeVelocity =
-            FlightController
-                .landingVelocityLimit(
-                    altitude
-                )
-
-        val currentVelocity =
-            abs(
-                velocity
-            )
-
-        val safe =
-            currentVelocity <=
-                    safeVelocity
-
-        val pulse =
-            (
-                sin(
-                    animationTime * 8f
-                ) * 0.5f +
-                    0.5f
-            ).toFloat()
-
-        /*
-         * POŚWIATA RAKIETY
-         */
-
-        glowPaint.color =
-            if (safe) {
-
-                Color.argb(
-                    (
-                        35f +
-                            pulse * 35f
-                        ).toInt(),
-                    50,
-                    220,
-                    255
-                )
-
-            } else {
-
-                Color.argb(
-                    (
-                        45f +
-                            pulse * 55f
-                        ).toInt(),
-                    255,
-                    50,
-                    50
-                )
-            }
-
-        glowPaint.setShadowLayer(
-            45f,
-            0f,
-            0f,
-            glowPaint.color
-        )
-
-        canvas.drawCircle(
-            centerX,
-            centerY - 25f,
-            55f,
-            glowPaint
-        )
-
-        glowPaint.clearShadowLayer()
-
-        /*
-         * STREFA LĄDOWANIA
-         */
 
         val groundY =
-            height - 45f
-
-        val zoneLeft =
-            centerX - 115f
-
-        val zoneRight =
-            centerX + 115f
-
-        zonePaint.color =
-            Color.argb(
-                115,
-                35,
-                210,
-                100
-            )
-
-        canvas.drawRoundRect(
-            zoneLeft,
-            groundY - 14f,
-            zoneRight,
-            groundY + 14f,
-            14f,
-            14f,
-            zonePaint
-        )
-
-        zoneBorderPaint.color =
-            Color.rgb(
-                70,
-                255,
-                150
-            )
-
-        canvas.drawRoundRect(
-            zoneLeft,
-            groundY - 14f,
-            zoneRight,
-            groundY + 14f,
-            14f,
-            14f,
-            zoneBorderPaint
-        )
-
-        /*
-         * PUNKT CELU
-         */
-
-        markerPaint.color =
-            Color.WHITE
-
-        canvas.drawCircle(
-            centerX,
-            groundY,
-            5f,
-            markerPaint
-        )
-
-        /*
-         * LINIE PROWADZĄCE
-         */
-
-        markerPaint.color =
-            Color.argb(
-                100,
-                100,
-                220,
-                255
-            )
-
-        markerPaint.strokeWidth =
-            2f
-
-        canvas.drawLine(
-            centerX - 70f,
-            centerY + 30f,
-            centerX - 30f,
-            groundY - 18f,
-            markerPaint
-        )
-
-        canvas.drawLine(
-            centerX + 70f,
-            centerY + 30f,
-            centerX + 30f,
-            groundY - 18f,
-            markerPaint
-        )
-
-        /*
-         * SPADOCHRON
-         */
-
-        if (
-            altitude <= 250f
-        ) {
-
-            drawParachute(
-                canvas,
-                centerX,
-                centerY - 105f
-            )
-        }
-
-        /*
-         * PYŁ PRZY ZIEMI
-         */
-
-        if (
-            altitude <= 120f
-        ) {
-
-            drawLandingDust(
-                canvas,
-                centerX,
-                groundY
-            )
-        }
-
-        /*
-         * NAPIS STREFY
-         */
-
-        textPaint.textAlign =
-            Paint.Align.CENTER
-
-        textPaint.textSize =
-            13f
-
-        textPaint.color =
-            Color.rgb(
-                110,
-                255,
-                170
-            )
-
-        canvas.drawText(
-            "STREFA LĄDOWANIA",
-            centerX,
-            groundY + 38f,
-            textPaint
-        )
-
-        /*
-         * OSTRZEŻENIE
-         */
-
-        if (!safe) {
-
-            val alpha =
-                (
-                    130f +
-                        pulse * 125f
-                    ).toInt()
-
-            textPaint.color =
-                Color.argb(
-                    alpha,
-                    255,
-                    70,
-                    70
-                )
-
-            textPaint.textSize =
-                15f
-
-            canvas.drawText(
-                "REDUKCJA PRĘDKOŚCI",
-                centerX,
-                38f,
-                textPaint
-            )
-        }
-    }
-
-    private fun drawParachute(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float
-    ) {
-
-        val opening =
-            (
-                sin(
-                    animationTime * 4f
-                ) * 0.5f +
-                    0.5f
-            ).toFloat()
-
-        val canopyWidth =
-            105f +
-                opening * 8f
-
-        val canopyHeight =
-            50f
-
-        /*
-         * CZASZA
-         */
-
-        parachutePaint.color =
-            Color.argb(
-                225,
-                235,
-                235,
-                245
-            )
-
-        path.reset()
-
-        path.moveTo(
-            centerX - canopyWidth,
-            centerY
-        )
-
-        path.quadTo(
-            centerX,
-            centerY - canopyHeight,
-            centerX + canopyWidth,
-            centerY
-        )
-
-        path.close()
-
-        canvas.drawPath(
-            path,
-            parachutePaint
-        )
-
-        /*
-         * PODZIAŁ CZASZY
-         */
-
-        parachuteLinePaint.color =
-            Color.rgb(
-                110,
-                130,
-                150
-            )
-
-        canvas.drawLine(
-            centerX,
-            centerY - canopyHeight,
-            centerX,
-            centerY,
-            parachuteLinePaint
-        )
-
-        canvas.drawLine(
-            centerX - canopyWidth * 0.5f,
-            centerY - canopyHeight * 0.5f,
-            centerX - canopyWidth * 0.25f,
-            centerY,
-            parachuteLinePaint
-        )
-
-        canvas.drawLine(
-            centerX + canopyWidth * 0.5f,
-            centerY - canopyHeight * 0.5f,
-            centerX + canopyWidth * 0.25f,
-            centerY,
-            parachuteLinePaint
-        )
-
-        /*
-         * LINKI
-         */
-
-        canvas.drawLine(
-            centerX - canopyWidth * 0.75f,
-            centerY,
-            centerX - 18f,
-            centerY + 70f,
-            parachuteLinePaint
-        )
-
-        canvas.drawLine(
-            centerX + canopyWidth * 0.75f,
-            centerY,
-            centerX + 18f,
-            centerY + 70f,
-            parachuteLinePaint
-        )
-
-        /*
-         * NAPIS
-         */
-
-        textPaint.textAlign =
-            Paint.Align.CENTER
-
-        textPaint.textSize =
-            12f
-
-        textPaint.color =
-            Color.rgb(
-                230,
-                240,
-                255
-            )
-
-        canvas.drawText(
-            "SPADOCHRON",
-            centerX,
-            centerY - canopyHeight - 10f,
-            textPaint
-        )
-    }
-
-    private fun drawLandingDust(
-        canvas: Canvas,
-        centerX: Float,
-        groundY: Float
-    ) {
-
-        val movement =
-            (
-                animationTime * 45f
-            ) % 80f
-
-        val particlePaint =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            )
-
-        particlePaint.color =
-            Color.argb(
-                130,
-                180,
-                190,
-                195
-            )
-
-        val positions =
-            floatArrayOf(
-                -70f,
-                -42f,
-                -15f,
-                15f,
-                42f,
-                70f
-            )
-
-        for (
-            index in positions.indices
-        ) {
-
-            val direction =
-                if (
-                    index % 2 == 0
-                ) {
-                    1f
-                } else {
-                    -1f
-                }
-
-            val x =
-                centerX +
-                    positions[index] +
-                    movement *
-                    direction
-
-            val y =
-                groundY -
-                    5f -
-                    (
-                        (
-                            index * 7f +
-                                animationTime * 30f
-                        ) % 25f
-                    )
-
-            val radius =
-                2f +
-                    (
-                        index % 3
-                    )
-
-            canvas.drawCircle(
-                x,
-                y,
-                radius,
-                particlePaint
-            )
-        }
-    }
-
-    private fun drawSuccessEffect(
-        canvas: Canvas
-    ) {
-
-        val centerX =
-            width / 2f
-
-        val centerY =
-            height / 2f
+            height * 0.78f
 
         val pulse =
             (
@@ -676,72 +370,417 @@ class LandingEffectsView(
                     0.5f
             ).toFloat()
 
+        landingZonePaint.color =
+            Color.argb(
+                (
+                    35f +
+                        pulse * 35f
+                    ).toInt(),
+                40,
+                255,
+                120
+            )
+
+        canvas.drawOval(
+            centerX - 115f,
+            groundY - 14f,
+            centerX + 115f,
+            groundY + 14f,
+            landingZonePaint
+        )
+
         glowPaint.color =
             Color.argb(
                 (
-                    25f +
-                        pulse * 50f
+                    30f +
+                        pulse * 40f
                     ).toInt(),
-                60,
+                50,
                 255,
                 140
             )
 
         glowPaint.setShadowLayer(
-            70f,
+            25f,
             0f,
             0f,
-            glowPaint.color
+            Color.rgb(
+                50,
+                255,
+                140
+            )
         )
 
-        canvas.drawCircle(
-            centerX,
-            centerY,
-            45f + pulse * 25f,
+        canvas.drawOval(
+            centerX - 80f,
+            groundY - 5f,
+            centerX + 80f,
+            groundY + 5f,
             glowPaint
         )
 
         glowPaint.clearShadowLayer()
 
-        val ringPaint =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
+        textPaint.textAlign =
+            Paint.Align.CENTER
+
+        textPaint.textSize =
+            14f
+
+        textPaint.color =
+            Color.rgb(
+                90,
+                255,
+                160
             )
 
-        ringPaint.style =
-            Paint.Style.STROKE
+        canvas.drawText(
+            "STREFA BEZPIECZNEGO LĄDOWANIA",
+            centerX,
+            groundY + 38f,
+            textPaint
+        )
+    }
 
-        ringPaint.strokeWidth =
-            5f
+    private fun drawTrajectory(
+        canvas: Canvas,
+        centerX: Float,
+        rocketY: Float
+    ) {
 
-        ringPaint.color =
+        trajectoryPaint.color =
+            Color.argb(
+                110,
+                120,
+                220,
+                255
+            )
+
+        val groundY =
+            height * 0.76f
+
+        var y =
+            rocketY + 55f
+
+        while (
+            y < groundY
+        ) {
+
+            canvas.drawLine(
+                centerX,
+                y,
+                centerX,
+                y + 12f,
+                trajectoryPaint
+            )
+
+            y += 25f
+        }
+    }
+
+    private fun drawParachute(
+        canvas: Canvas,
+        centerX: Float,
+        rocketY: Float
+    ) {
+
+        val open =
+            altitude < 80f ||
+                velocity < 42f
+
+        if (!open) {
+            return
+        }
+
+        val parachuteY =
+            rocketY - 75f
+
+        val width =
+            if (altitude < 35f) {
+                105f
+            } else {
+                85f
+            }
+
+        val height =
+            55f
+
+        parachutePaint.color =
+            Color.argb(
+                235,
+                220,
+                225,
+                235
+            )
+
+        canvas.drawArc(
+            centerX - width,
+            parachuteY - height,
+            centerX + width,
+            parachuteY + height,
+            180f,
+            180f,
+            true,
+            parachutePaint
+        )
+
+        parachuteLinePaint.color =
+            Color.rgb(
+                235,
+                240,
+                255
+            )
+
+        canvas.drawLine(
+            centerX - width * 0.75f,
+            parachuteY + 5f,
+            centerX - 25f,
+            rocketY - 20f,
+            parachuteLinePaint
+        )
+
+        canvas.drawLine(
+            centerX + width * 0.75f,
+            parachuteY + 5f,
+            centerX + 25f,
+            rocketY - 20f,
+            parachuteLinePaint
+        )
+
+        canvas.drawLine(
+            centerX,
+            parachuteY + 10f,
+            centerX,
+            rocketY - 15f,
+            parachuteLinePaint
+        )
+
+        textPaint.textAlign =
+            Paint.Align.CENTER
+
+        textPaint.textSize =
+            13f
+
+        textPaint.color =
+            Color.WHITE
+
+        canvas.drawText(
+            "🪂 SPADOCHRON",
+            centerX,
+            parachuteY - 65f,
+            textPaint
+        )
+    }
+
+    private fun drawVelocityIndicator(
+        canvas: Canvas,
+        centerX: Float
+    ) {
+
+        val safe =
+            velocity <= 35f
+
+        val almostSafe =
+            velocity <= 45f
+
+        val color =
+            when {
+
+                safe ->
+                    Color.rgb(
+                        70,
+                        255,
+                        150
+                    )
+
+                almostSafe ->
+                    Color.rgb(
+                        255,
+                        210,
+                        60
+                    )
+
+                else ->
+                    Color.rgb(
+                        255,
+                        60,
+                        60
+                    )
+            }
+
+        glowPaint.color =
+            Color.argb(
+                180,
+                Color.red(color),
+                Color.green(color),
+                Color.blue(color)
+            )
+
+        glowPaint.setShadowLayer(
+            18f,
+            0f,
+            0f,
+            color
+        )
+
+        canvas.drawCircle(
+            centerX,
+            height * 0.90f,
+            9f,
+            glowPaint
+        )
+
+        glowPaint.clearShadowLayer()
+
+        textPaint.textAlign =
+            Paint.Align.CENTER
+
+        textPaint.textSize =
+            15f
+
+        textPaint.color =
+            color
+
+        val label =
+            when {
+
+                safe ->
+                    "PRĘDKOŚĆ BEZPIECZNA"
+
+                almostSafe ->
+                    "HAMOWANIE"
+
+                else ->
+                    "ZA DUŻA PRĘDKOŚĆ"
+            }
+
+        canvas.drawText(
+            label,
+            centerX,
+            height * 0.95f,
+            textPaint
+        )
+    }
+
+    private fun drawParticles(
+        canvas: Canvas
+    ) {
+
+        for (
+            particle in particles
+        ) {
+
+            val alpha =
+                (
+                    particle.life *
+                        255f
+                    ).toInt()
+                    .coerceIn(
+                        0,
+                        255
+                    )
+
+            particlePaint.color =
+                Color.argb(
+                    alpha,
+                    150,
+                    220,
+                    255
+                )
+
+            canvas.drawCircle(
+                particle.x,
+                particle.y,
+                particle.size,
+                particlePaint
+            )
+        }
+    }
+
+    private fun drawSuccessEffect(
+        canvas: Canvas,
+        centerX: Float
+    ) {
+
+        val pulse =
+            (
+                sin(
+                    animationTime * 8f
+                ) * 0.5f +
+                    0.5f
+            ).toFloat()
+
+        glowPaint.color =
             Color.argb(
                 (
-                    100f +
-                        pulse * 155f
+                    30f +
+                        pulse * 70f
                     ).toInt(),
-                70,
+                60,
                 255,
                 150
             )
 
+        glowPaint.setShadowLayer(
+            45f,
+            0f,
+            0f,
+            Color.rgb(
+                60,
+                255,
+                150
+            )
+        )
+
         canvas.drawCircle(
             centerX,
-            centerY,
-            75f + pulse * 20f,
-            ringPaint
+            height * 0.76f,
+            45f +
+                pulse * 20f,
+            glowPaint
         )
+
+        glowPaint.clearShadowLayer()
+
+        repeat(12) { index ->
+
+            val angle =
+                animationTime * 1.5f +
+                    index *
+                    (Math.PI.toFloat() * 2f / 12f)
+
+            val radius =
+                60f +
+                    pulse * 45f
+
+            val x =
+                centerX +
+                    cos(angle) * radius
+
+            val y =
+                height * 0.76f +
+                    sin(angle) * radius
+
+            particlePaint.color =
+                Color.rgb(
+                    80,
+                    255,
+                    160
+                )
+
+            canvas.drawCircle(
+                x,
+                y,
+                4f,
+                particlePaint
+            )
+        }
     }
 
     private fun drawFailureEffect(
-        canvas: Canvas
+        canvas: Canvas,
+        centerX: Float
     ) {
-
-        val centerX =
-            width / 2f
-
-        val centerY =
-            height / 2f
 
         val pulse =
             (
@@ -751,40 +790,11 @@ class LandingEffectsView(
                     0.5f
             ).toFloat()
 
-        val ringPaint =
-            Paint(
-                Paint.ANTI_ALIAS_FLAG
-            )
-
-        ringPaint.style =
-            Paint.Style.STROKE
-
-        ringPaint.strokeWidth =
-            6f
-
-        ringPaint.color =
-            Color.argb(
-                (
-                    100f +
-                        pulse * 155f
-                    ).toInt(),
-                255,
-                50,
-                50
-            )
-
-        canvas.drawCircle(
-            centerX,
-            centerY,
-            65f + pulse * 30f,
-            ringPaint
-        )
-
         glowPaint.color =
             Color.argb(
                 (
-                    20f +
-                        pulse * 45f
+                    35f +
+                        pulse * 70f
                     ).toInt(),
                 255,
                 40,
@@ -792,20 +802,41 @@ class LandingEffectsView(
             )
 
         glowPaint.setShadowLayer(
-            65f,
+            40f,
             0f,
             0f,
-            glowPaint.color
+            Color.RED
         )
 
         canvas.drawCircle(
             centerX,
-            centerY,
-            40f,
+            height * 0.76f,
+            40f +
+                pulse * 18f,
             glowPaint
         )
 
         glowPaint.clearShadowLayer()
+
+        textPaint.textAlign =
+            Paint.Align.CENTER
+
+        textPaint.textSize =
+            16f
+
+        textPaint.color =
+            Color.rgb(
+                255,
+                90,
+                90
+            )
+
+        canvas.drawText(
+            "⚠ AWARIA LĄDOWANIA",
+            centerX,
+            height * 0.87f,
+            textPaint
+        )
     }
 
     override fun onDetachedFromWindow() {
@@ -813,6 +844,8 @@ class LandingEffectsView(
         handler.removeCallbacks(
             updateRunnable
         )
+
+        particles.clear()
 
         super.onDetachedFromWindow()
     }
