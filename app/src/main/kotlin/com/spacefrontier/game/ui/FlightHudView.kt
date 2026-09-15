@@ -1,12 +1,16 @@
 package com.spacefrontier.game.ui
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import com.spacefrontier.game.logic.FuelStatus
+import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
 import com.spacefrontier.game.models.Rocket
 import kotlin.math.roundToInt
@@ -14,6 +18,9 @@ import kotlin.math.roundToInt
 class FlightHudView(
     context: Context
 ) : View(context) {
+
+    private val handler =
+        Handler(Looper.getMainLooper())
 
     private val backgroundPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
@@ -47,6 +54,20 @@ class FlightHudView(
             maxFuel = 0f
         )
 
+    private val updateRunnable =
+        object : Runnable {
+
+            override fun run() {
+
+                updateFromGameEngine()
+
+                handler.postDelayed(
+                    this,
+                    100
+                )
+            }
+        }
+
     init {
 
         backgroundPaint.color =
@@ -60,7 +81,7 @@ class FlightHudView(
             Color.WHITE
 
         titlePaint.textSize =
-            24f
+            22f
 
         titlePaint.typeface =
             Typeface.create(
@@ -72,7 +93,7 @@ class FlightHudView(
             Color.WHITE
 
         valuePaint.textSize =
-            22f
+            21f
 
         valuePaint.typeface =
             Typeface.create(
@@ -88,7 +109,7 @@ class FlightHudView(
             )
 
         smallPaint.textSize =
-            17f
+            16f
 
         fuelBackgroundPaint.color =
             Color.rgb(
@@ -112,7 +133,7 @@ class FlightHudView(
             )
 
         warningPaint.textSize =
-            25f
+            22f
 
         warningPaint.typeface =
             Typeface.create(
@@ -124,23 +145,62 @@ class FlightHudView(
             View.LAYER_TYPE_SOFTWARE,
             null
         )
+
+        handler.post(
+            updateRunnable
+        )
     }
 
-    fun update(
-        newRocket: Rocket,
-        newPhase: GameState.GamePhase
-    ) {
+    private fun getGameEngine():
+            GameEngine? {
+
+        val activity =
+            context as? Activity
+                ?: return null
+
+        return try {
+
+            val field =
+                activity.javaClass
+                    .getDeclaredField(
+                        "gameEngine"
+                    )
+
+            field.isAccessible =
+                true
+
+            field.get(activity)
+                    as? GameEngine
+
+        } catch (
+            exception: Exception
+        ) {
+
+            null
+        }
+    }
+
+    private fun updateFromGameEngine() {
+
+        val engine =
+            getGameEngine()
+                ?: return
+
+        val state =
+            engine.getGameState()
 
         rocket =
-            newRocket
+            state.rocket
 
         gamePhase =
-            newPhase
+            state.gamePhase
 
         fuelStatus =
             FuelStatus.from(
-                fuel = newRocket.fuel,
-                maxFuel = newRocket.maxFuel
+                fuel =
+                    state.rocket.fuel,
+                maxFuel =
+                    state.rocket.maxFuel
             )
 
         invalidate()
@@ -150,7 +210,9 @@ class FlightHudView(
         canvas: Canvas
     ) {
 
-        super.onDraw(canvas)
+        super.onDraw(
+            canvas
+        )
 
         val currentRocket =
             rocket
@@ -170,34 +232,25 @@ class FlightHudView(
         )
 
         canvas.drawRoundRect(
-            16f,
-            16f,
-            panelWidth - 16f,
-            panelHeight - 16f,
-            20f,
-            20f,
+            12f,
+            8f,
+            panelWidth - 12f,
+            panelHeight - 8f,
+            18f,
+            18f,
             backgroundPaint
         )
 
         backgroundPaint.clearShadowLayer()
 
         var y =
-            48f
+            34f
 
         canvas.drawText(
             "🚀 ${currentRocket.name}",
-            30f,
+            24f,
             y,
             titlePaint
-        )
-
-        y += 38f
-
-        canvas.drawText(
-            "FAZA LOTU",
-            30f,
-            y,
-            smallPaint
         )
 
         val stageText =
@@ -221,10 +274,10 @@ class FlightHudView(
                     "LĄDOWANIE"
 
                 GameState.GamePhase.LANDED_SUCCESS ->
-                    "LĄDOWANIE UDANE"
+                    "SUKCES"
 
                 GameState.GamePhase.LANDED_FAILED ->
-                    "KATASTROFA"
+                    "AWARIA"
 
                 else ->
                     "GOTOWOŚĆ"
@@ -232,24 +285,24 @@ class FlightHudView(
 
         canvas.drawText(
             stageText,
-            panelWidth - 150f,
+            panelWidth - 115f,
             y,
             valuePaint
         )
 
-        y += 45f
+        y += 32f
 
         canvas.drawText(
             "🌍 WYSOKOŚĆ",
-            30f,
+            24f,
             y,
             smallPaint
         )
 
         canvas.drawText(
             "${currentRocket.altitude.roundToInt()} km",
-            30f,
-            y + 29f,
+            24f,
+            y + 24f,
             valuePaint
         )
 
@@ -263,45 +316,45 @@ class FlightHudView(
         canvas.drawText(
             "${currentRocket.velocity.roundToInt()}",
             panelWidth / 2f,
-            y + 29f,
+            y + 24f,
             valuePaint
         )
 
-        y += 75f
+        y += 58f
 
         canvas.drawText(
             "⛽ PALIWO",
-            30f,
+            24f,
             y,
             smallPaint
         )
 
         canvas.drawText(
             fuelStatus.percentageText,
-            panelWidth - 85f,
+            panelWidth - 75f,
             y,
             valuePaint
         )
 
         val barLeft =
-            30f
+            24f
 
         val barRight =
-            panelWidth - 30f
+            panelWidth - 24f
 
         val barTop =
-            y + 14f
+            y + 9f
 
         val barBottom =
-            barTop + 18f
+            barTop + 14f
 
         canvas.drawRoundRect(
             barLeft,
             barTop,
             barRight,
             barBottom,
-            9f,
-            9f,
+            7f,
+            7f,
             fuelBackgroundPaint
         )
 
@@ -311,15 +364,15 @@ class FlightHudView(
                 fuelStatus.isCritical ->
                     Color.rgb(
                         255,
-                        60,
-                        50
+                        55,
+                        45
                     )
 
                 fuelStatus.isLow ->
                     Color.rgb(
                         255,
                         190,
-                        50
+                        45
                     )
 
                 else ->
@@ -342,16 +395,16 @@ class FlightHudView(
             barTop,
             barLeft + fuelWidth,
             barBottom,
-            9f,
-            9f,
+            7f,
+            7f,
             fuelPaint
         )
 
-        y += 60f
+        y += 39f
 
         canvas.drawText(
             "⛽ ${fuelStatus.displayText}",
-            30f,
+            24f,
             y,
             smallPaint
         )
@@ -366,10 +419,19 @@ class FlightHudView(
 
             canvas.drawText(
                 "⚠ LOW FUEL",
-                30f,
-                panelHeight - 25f,
+                panelWidth - 135f,
+                y,
                 warningPaint
             )
         }
+    }
+
+    override fun onDetachedFromWindow() {
+
+        handler.removeCallbacks(
+            updateRunnable
+        )
+
+        super.onDetachedFromWindow()
     }
 }
