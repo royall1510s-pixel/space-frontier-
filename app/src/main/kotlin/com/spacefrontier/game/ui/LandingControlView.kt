@@ -46,18 +46,38 @@ class LandingControlView(
     private var parachuteOpened =
         false
 
+    private var lastUpdateTime =
+        System.nanoTime()
+
     private val updateRunnable =
         object : Runnable {
 
             override fun run() {
 
-                updateState()
+                val now =
+                    System.nanoTime()
+
+                val deltaTime =
+                    (
+                        now -
+                            lastUpdateTime
+                    ) / 1_000_000_000f
+
+                lastUpdateTime =
+                    now
+
+                updateState(
+                    deltaTime.coerceIn(
+                        0f,
+                        0.10f
+                    )
+                )
 
                 invalidate()
 
                 postDelayed(
                     this,
-                    80
+                    50
                 )
             }
         }
@@ -121,7 +141,9 @@ class LandingControlView(
         }
     }
 
-    private fun updateState() {
+    private fun updateState(
+        deltaTime: Float
+    ) {
 
         val engine =
             getGameEngine()
@@ -140,15 +162,86 @@ class LandingControlView(
             state.rocket.altitude
 
         if (
-            phase !=
+            phase ==
             GameState.GamePhase.LANDING_SEQUENCE
         ) {
+
+            applyLandingControls(
+                engine,
+                deltaTime
+            )
+
+            velocity =
+                state.rocket.velocity
+
+            altitude =
+                state.rocket.altitude
+
+        } else {
 
             brakePower =
                 0f
 
             parachuteOpened =
                 false
+        }
+    }
+
+    private fun applyLandingControls(
+        engine: GameEngine,
+        deltaTime: Float
+    ) {
+
+        val rocket =
+            engine
+                .getGameState()
+                .rocket
+
+        /*
+         * W fizyce gry prędkość opadania
+         * jest wartością ujemną.
+         *
+         * HAMULEC zwiększa prędkość
+         * w kierunku zera, czyli spowalnia
+         * opadanie rakiety.
+         */
+        if (
+            brakePower > 0f
+        ) {
+
+            rocket.velocity +=
+                30f *
+                    brakePower *
+                    deltaTime
+
+            if (
+                rocket.velocity > 0f
+            ) {
+
+                rocket.velocity =
+                    0f
+            }
+        }
+
+        /*
+         * SPADOCHRON ogranicza prędkość
+         * opadania do bezpiecznego poziomu.
+         */
+        if (
+            parachuteOpened
+        ) {
+
+            val parachuteLimit =
+                -22f
+
+            if (
+                rocket.velocity <
+                parachuteLimit
+            ) {
+
+                rocket.velocity =
+                    parachuteLimit
+            }
         }
     }
 
@@ -233,23 +326,28 @@ class LandingControlView(
         panelPaint.clearShadowLayer()
 
         borderPaint.color =
-            if (
-                velocity > 35f
-            ) {
+            when {
 
-                Color.rgb(
-                    255,
-                    70,
-                    60
-                )
+                velocity > 35f ->
+                    Color.rgb(
+                        255,
+                        70,
+                        60
+                    )
 
-            } else {
+                velocity > 28f ->
+                    Color.rgb(
+                        255,
+                        190,
+                        60
+                    )
 
-                Color.rgb(
-                    70,
-                    210,
-                    255
-                )
+                else ->
+                    Color.rgb(
+                        70,
+                        210,
+                        255
+                    )
             }
 
         canvas.drawRoundRect(
@@ -313,10 +411,6 @@ class LandingControlView(
             centerX -
                 barWidth / 2f
 
-        val right =
-            centerX +
-                barWidth / 2f
-
         val progress =
             min(
                 velocity / 45f,
@@ -333,7 +427,7 @@ class LandingControlView(
         canvas.drawRoundRect(
             left,
             y,
-            right,
+            left + barWidth,
             y + 13f,
             7f,
             7f,
@@ -341,23 +435,28 @@ class LandingControlView(
         )
 
         buttonPaint.color =
-            if (
-                velocity <= 35f
-            ) {
+            when {
 
-                Color.rgb(
-                    70,
-                    255,
-                    150
-                )
+                velocity <= 25f ->
+                    Color.rgb(
+                        70,
+                        255,
+                        150
+                    )
 
-            } else {
+                velocity <= 35f ->
+                    Color.rgb(
+                        255,
+                        210,
+                        60
+                    )
 
-                Color.rgb(
-                    255,
-                    70,
-                    60
-                )
+                else ->
+                    Color.rgb(
+                        255,
+                        70,
+                        60
+                    )
             }
 
         canvas.drawRoundRect(
@@ -365,7 +464,7 @@ class LandingControlView(
             y,
             left +
                 barWidth *
-                progress,
+                progress.coerceAtLeast(0f),
             y + 13f,
             7f,
             7f,
@@ -395,11 +494,10 @@ class LandingControlView(
         y: Float
     ) {
 
-        val pressed =
-            brakePower > 0f
-
         buttonPaint.color =
-            if (pressed) {
+            if (
+                brakePower > 0f
+            ) {
 
                 Color.rgb(
                     40,
@@ -436,7 +534,9 @@ class LandingControlView(
             Color.WHITE
 
         canvas.drawText(
-            if (pressed)
+            if (
+                brakePower > 0f
+            )
                 "◀ HAMULEC AKTYWNY"
             else
                 "◀ HAMUJ",
@@ -453,7 +553,9 @@ class LandingControlView(
     ) {
 
         buttonPaint.color =
-            if (parachuteOpened) {
+            if (
+                parachuteOpened
+            ) {
 
                 Color.rgb(
                     40,
@@ -490,7 +592,9 @@ class LandingControlView(
             Color.WHITE
 
         canvas.drawText(
-            if (parachuteOpened)
+            if (
+                parachuteOpened
+            )
                 "🪂 SPADOCHRON OTW."
             else
                 "🪂 SPADOCHRON",
@@ -511,18 +615,6 @@ class LandingControlView(
             return false
         }
 
-        if (
-            event.action !=
-            MotionEvent.ACTION_DOWN &&
-            event.action !=
-            MotionEvent.ACTION_MOVE &&
-            event.action !=
-            MotionEvent.ACTION_UP
-        ) {
-
-            return true
-        }
-
         val centerX =
             width / 2f
 
@@ -532,11 +624,11 @@ class LandingControlView(
         val parachuteX =
             centerX + 85f
 
-        val brakeTop =
-            height - 175f
+        val buttonTop =
+            height - 160f
 
-        val brakeBottom =
-            height - 95f
+        val buttonBottom =
+            height - 80f
 
         val brakePressed =
             event.x >=
@@ -544,9 +636,9 @@ class LandingControlView(
             event.x <=
                 brakeX + 80f &&
             event.y >=
-                brakeTop &&
+                buttonTop &&
             event.y <=
-                brakeBottom
+                buttonBottom
 
         val parachutePressed =
             event.x >=
@@ -554,9 +646,9 @@ class LandingControlView(
             event.x <=
                 parachuteX + 80f &&
             event.y >=
-                brakeTop &&
+                buttonTop &&
             event.y <=
-                brakeBottom
+                buttonBottom
 
         when {
 
@@ -586,6 +678,17 @@ class LandingControlView(
 
                 parachuteOpened =
                     true
+
+                invalidate()
+
+                return true
+            }
+
+            event.action ==
+                MotionEvent.ACTION_UP -> {
+
+                brakePower =
+                    0f
 
                 invalidate()
 
