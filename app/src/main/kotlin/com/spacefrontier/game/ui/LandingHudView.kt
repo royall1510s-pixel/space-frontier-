@@ -9,8 +9,10 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import com.spacefrontier.game.logic.FlightController
 import com.spacefrontier.game.logic.GameEngine
 import com.spacefrontier.game.models.GameState
+import kotlin.math.abs
 import kotlin.math.sin
 
 class LandingHudView(
@@ -29,10 +31,19 @@ class LandingHudView(
     private val titlePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val infoPaint =
+    private val textPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val speedPaint =
+    private val smallPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val barBackgroundPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val barSafePaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val barDangerPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var phase:
@@ -43,6 +54,9 @@ class LandingHudView(
 
     private var altitude =
         0f
+
+    private var reward =
+        0
 
     private var animationTime =
         0f
@@ -76,10 +90,10 @@ class LandingHudView(
         titlePaint.typeface =
             Typeface.DEFAULT_BOLD
 
-        infoPaint.typeface =
+        textPaint.typeface =
             Typeface.DEFAULT_BOLD
 
-        speedPaint.typeface =
+        smallPaint.typeface =
             Typeface.DEFAULT_BOLD
 
         borderPaint.style =
@@ -139,6 +153,9 @@ class LandingHudView(
 
         altitude =
             state.rocket.altitude
+
+        reward =
+            state.missionReward
     }
 
     override fun onDraw(
@@ -152,17 +169,36 @@ class LandingHudView(
         val currentPhase =
             phase
 
-        if (
-            currentPhase !=
-            GameState.GamePhase.LANDING_SEQUENCE &&
-            currentPhase !=
-            GameState.GamePhase.LANDED_SUCCESS &&
-            currentPhase !=
-            GameState.GamePhase.LANDED_FAILED
-        ) {
+        when (currentPhase) {
 
-            return
+            GameState.GamePhase.LANDING_SEQUENCE -> {
+
+                drawLanding(
+                    canvas
+                )
+            }
+
+            GameState.GamePhase.LANDED_SUCCESS -> {
+
+                drawSuccess(
+                    canvas
+                )
+            }
+
+            GameState.GamePhase.LANDED_FAILED -> {
+
+                drawFailure(
+                    canvas
+                )
+            }
+
+            else -> Unit
         }
+    }
+
+    private fun drawLanding(
+        canvas: Canvas
+    ) {
 
         val centerX =
             width / 2f
@@ -170,38 +206,20 @@ class LandingHudView(
         val centerY =
             height / 2f
 
-        when (currentPhase) {
-
-            GameState.GamePhase.LANDING_SEQUENCE ->
-                drawLanding(
-                    canvas,
-                    centerX,
-                    centerY
+        val safeVelocity =
+            FlightController
+                .landingVelocityLimit(
+                    altitude
                 )
 
-            GameState.GamePhase.LANDED_SUCCESS ->
-                drawSuccess(
-                    canvas,
-                    centerX,
-                    centerY
-                )
+        val currentVelocity =
+            abs(
+                velocity
+            )
 
-            GameState.GamePhase.LANDED_FAILED ->
-                drawFailure(
-                    canvas,
-                    centerX,
-                    centerY
-                )
-
-            else -> Unit
-        }
-    }
-
-    private fun drawLanding(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float
-    ) {
+        val safe =
+            currentVelocity <=
+                    safeVelocity
 
         val pulse =
             (
@@ -211,40 +229,59 @@ class LandingHudView(
                     0.5f
             ).toFloat()
 
+        /*
+         * GŁÓWNY PANEL
+         */
+
         panelPaint.color =
             Color.argb(
-                225,
-                5,
-                25,
-                45
+                235,
+                4,
+                18,
+                35
             )
 
         canvas.drawRoundRect(
-            20f,
-            centerY - 85f,
-            width - 20f,
-            centerY + 85f,
-            22f,
-            22f,
+            15f,
+            centerY - 175f,
+            width - 15f,
+            centerY + 175f,
+            25f,
+            25f,
             panelPaint
         )
 
         borderPaint.color =
-            Color.rgb(
-                80,
-                190,
-                255
-            )
+            if (safe) {
+
+                Color.rgb(
+                    70,
+                    210,
+                    255
+                )
+
+            } else {
+
+                Color.rgb(
+                    255,
+                    70,
+                    70
+                )
+            }
 
         canvas.drawRoundRect(
-            20f,
-            centerY - 85f,
-            width - 20f,
-            centerY + 85f,
-            22f,
-            22f,
+            15f,
+            centerY - 175f,
+            width - 15f,
+            centerY + 175f,
+            25f,
+            25f,
             borderPaint
         )
+
+        /*
+         * TYTUŁ
+         */
 
         titlePaint.textAlign =
             Paint.Align.CENTER
@@ -255,40 +292,342 @@ class LandingHudView(
         titlePaint.color =
             Color.rgb(
                 100,
-                210,
+                215,
                 255
             )
 
         canvas.drawText(
-            "LĄDOWANIE",
+            "PROCEDURA LĄDOWANIA",
             centerX,
-            centerY - 42f,
+            centerY - 138f,
             titlePaint
         )
 
-        infoPaint.textAlign =
+        /*
+         * WYSOKOŚĆ
+         */
+
+        textPaint.textAlign =
             Paint.Align.CENTER
 
-        infoPaint.textSize =
-            16f
+        textPaint.textSize =
+            18f
 
-        infoPaint.color =
+        textPaint.color =
             Color.WHITE
 
         canvas.drawText(
-            "Wysokość: ${altitude.toInt()} km",
+            "WYSOKOŚĆ: ${altitude.toInt()} km",
             centerX,
-            centerY - 10f,
-            infoPaint
+            centerY - 103f,
+            textPaint
         )
 
-        val safe =
-            velocity <= 45f
+        /*
+         * CEL
+         */
 
-        speedPaint.textSize =
-            21f
+        smallPaint.textAlign =
+            Paint.Align.CENTER
 
-        speedPaint.color =
+        smallPaint.textSize =
+            14f
+
+        smallPaint.color =
+            Color.rgb(
+                170,
+                205,
+                225
+            )
+
+        canvas.drawText(
+            "CEL: 0 km",
+            centerX,
+            centerY - 78f,
+            smallPaint
+        )
+
+        /*
+         * PRĘDKOŚĆ
+         */
+
+        textPaint.textSize =
+            24f
+
+        textPaint.color =
+            if (safe) {
+
+                Color.rgb(
+                    70,
+                    255,
+                    150
+                )
+
+            } else {
+
+                Color.rgb(
+                    255,
+                    65,
+                    65
+                )
+            }
+
+        canvas.drawText(
+            "PRĘDKOŚĆ: ${currentVelocity.toInt()} km/h",
+            centerX,
+            centerY - 38f,
+            textPaint
+        )
+
+        /*
+         * LIMIT
+         */
+
+        smallPaint.textSize =
+            14f
+
+        smallPaint.color =
+            Color.WHITE
+
+        canvas.drawText(
+            "BEZPIECZNY LIMIT: ${safeVelocity.toInt()} km/h",
+            centerX,
+            centerY - 14f,
+            smallPaint
+        )
+
+        /*
+         * PASEK PRĘDKOŚCI
+         */
+
+        val barLeft =
+            35f
+
+        val barRight =
+            width - 35f
+
+        val barTop =
+            centerY + 8f
+
+        val barBottom =
+            centerY + 28f
+
+        barBackgroundPaint.color =
+            Color.rgb(
+                25,
+                35,
+                50
+            )
+
+        canvas.drawRoundRect(
+            barLeft,
+            barTop,
+            barRight,
+            barBottom,
+            10f,
+            10f,
+            barBackgroundPaint
+        )
+
+        /*
+         * Zielona strefa bezpieczeństwa
+         */
+
+        val safeRatio =
+            (
+                safeVelocity /
+                        45f
+                ).coerceIn(
+                    0f,
+                    1f
+                )
+
+        val safeRight =
+            barLeft +
+                    (
+                        barRight -
+                            barLeft
+                        ) *
+                    safeRatio
+
+        barSafePaint.color =
+            Color.rgb(
+                40,
+                190,
+                100
+            )
+
+        canvas.drawRoundRect(
+            barLeft,
+            barTop,
+            safeRight,
+            barBottom,
+            10f,
+            10f,
+            barSafePaint
+        )
+
+        /*
+         * Czerwona strefa
+         */
+
+        if (
+            safeRight <
+            barRight
+        ) {
+
+            barDangerPaint.color =
+                Color.rgb(
+                    210,
+                    45,
+                    45
+                )
+
+            canvas.drawRect(
+                safeRight,
+                barTop,
+                barRight,
+                barBottom,
+                barDangerPaint
+            )
+        }
+
+        /*
+         * WSKAŹNIK AKTUALNEJ PRĘDKOŚCI
+         */
+
+        val velocityRatio =
+            (
+                currentVelocity /
+                        45f
+                ).coerceIn(
+                    0f,
+                    1f
+                )
+
+        val indicatorX =
+            barLeft +
+                    (
+                        barRight -
+                            barLeft
+                        ) *
+                    velocityRatio
+
+        val indicatorPaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            )
+
+        indicatorPaint.color =
+            Color.WHITE
+
+        canvas.drawCircle(
+            indicatorX,
+            (
+                barTop +
+                    barBottom
+                ) / 2f,
+            8f,
+            indicatorPaint
+        )
+
+        /*
+         * OPIS STREFY
+         */
+
+        smallPaint.textSize =
+            12f
+
+        smallPaint.color =
+            Color.rgb(
+                100,
+                255,
+                160
+            )
+
+        smallPaint.textAlign =
+            Paint.Align.LEFT
+
+        canvas.drawText(
+            "BEZPIECZNIE",
+            barLeft,
+            centerY + 49f,
+            smallPaint
+        )
+
+        smallPaint.textAlign =
+            Paint.Align.RIGHT
+
+        smallPaint.color =
+            Color.rgb(
+                255,
+                100,
+                100
+            )
+
+        canvas.drawText(
+            "ZA SZYBKO",
+            barRight,
+            centerY + 49f,
+            smallPaint
+        )
+
+        /*
+         * SPADOCHRON
+         */
+
+        val parachuteOpened =
+            altitude <= 250f
+
+        smallPaint.textAlign =
+            Paint.Align.CENTER
+
+        smallPaint.textSize =
+            16f
+
+        smallPaint.color =
+            if (parachuteOpened) {
+
+                Color.rgb(
+                    90,
+                    255,
+                    190
+                )
+
+            } else {
+
+                Color.rgb(
+                    160,
+                    180,
+                    200
+                )
+            }
+
+        val parachuteText =
+            if (parachuteOpened) {
+
+                "SPADOCHRON OTWARTY"
+
+            } else {
+
+                "SPADOCHRON: OCZEKIWANIE"
+            }
+
+        canvas.drawText(
+            parachuteText,
+            centerX,
+            centerY + 82f,
+            smallPaint
+        )
+
+        /*
+         * STATUS
+         */
+
+        titlePaint.textSize =
+            18f
+
+        titlePaint.color =
             if (safe) {
 
                 Color.rgb(
@@ -306,59 +645,109 @@ class LandingHudView(
                 )
             }
 
+        val statusText =
+            if (safe) {
+
+                "PRĘDKOŚĆ BEZPIECZNA"
+
+            } else {
+
+                "REDUKUJ PRĘDKOŚĆ!"
+            }
+
         canvas.drawText(
-            "Prędkość: ${velocity.toInt()} km/h",
+            statusText,
             centerX,
-            centerY + 23f,
-            speedPaint
+            centerY + 113f,
+            titlePaint
         )
 
-        infoPaint.textSize =
-            14f
+        /*
+         * MIGAJĄCE OSTRZEŻENIE
+         */
 
-        infoPaint.color =
-            Color.argb(
+        if (!safe) {
+
+            val alpha =
                 (
                     150f +
                         pulse * 105f
-                ).toInt(),
-                255,
-                255,
-                255
+                    ).toInt()
+
+            smallPaint.color =
+                Color.argb(
+                    alpha,
+                    255,
+                    100,
+                    100
+                )
+
+            smallPaint.textSize =
+                14f
+
+            canvas.drawText(
+                "UWAGA — PRĘDKOŚĆ PRZEKRACZA LIMIT",
+                centerX,
+                centerY + 143f,
+                smallPaint
             )
+        } else {
 
-        canvas.drawText(
-            "AUTOMATYCZNA PROCEDURA LĄDOWANIA",
-            centerX,
-            centerY + 53f,
-            infoPaint
-        )
+            smallPaint.color =
+                Color.rgb(
+                    170,
+                    210,
+                    190
+                )
 
-        infoPaint.textAlign =
+            smallPaint.textSize =
+                13f
+
+            canvas.drawText(
+                "AUTOMATYCZNE HAMOWANIE",
+                centerX,
+                centerY + 143f,
+                smallPaint
+            )
+        }
+
+        smallPaint.textAlign =
             Paint.Align.LEFT
     }
 
     private fun drawSuccess(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float
+        canvas: Canvas
     ) {
+
+        val centerX =
+            width / 2f
+
+        val centerY =
+            height / 2f
+
+        val pulse =
+            (
+                sin(
+                    animationTime * 5f
+                ) * 0.5f +
+                    0.5f
+            ).toFloat()
 
         panelPaint.color =
             Color.argb(
-                235,
-                5,
-                50,
+                240,
+                4,
+                55,
                 30
             )
 
         canvas.drawRoundRect(
-            20f,
-            centerY - 90f,
-            width - 20f,
-            centerY + 90f,
-            22f,
-            22f,
+            15f,
+            centerY - 155f,
+            width - 15f,
+            centerY + 155f,
+            25f,
+            25f,
             panelPaint
         )
 
@@ -370,12 +759,12 @@ class LandingHudView(
             )
 
         canvas.drawRoundRect(
-            20f,
-            centerY - 90f,
-            width - 20f,
-            centerY + 90f,
-            22f,
-            22f,
+            15f,
+            centerY - 155f,
+            width - 15f,
+            centerY + 155f,
+            25f,
+            25f,
             borderPaint
         )
 
@@ -383,7 +772,7 @@ class LandingHudView(
             Paint.Align.CENTER
 
         titlePaint.textSize =
-            29f
+            30f
 
         titlePaint.color =
             Color.rgb(
@@ -395,92 +784,145 @@ class LandingHudView(
         canvas.drawText(
             "LĄDOWANIE UDANE!",
             centerX,
-            centerY - 42f,
+            centerY - 92f,
             titlePaint
         )
 
-        infoPaint.textAlign =
+        textPaint.textAlign =
             Paint.Align.CENTER
 
-        infoPaint.textSize =
-            18f
+        textPaint.textSize =
+            19f
 
-        infoPaint.color =
+        textPaint.color =
             Color.WHITE
 
         canvas.drawText(
-            "Rakieta bezpiecznie dotarła",
+            "RAKIETA BEZPIECZNIE",
             centerX,
-            centerY - 5f,
-            infoPaint
+            centerY - 48f,
+            textPaint
         )
 
         canvas.drawText(
-            "na powierzchnię planety.",
+            "OSIĄGNĘŁA POWIERZCHNIĘ PLANETY",
             centerX,
-            centerY + 22f,
-            infoPaint
+            centerY - 20f,
+            textPaint
         )
 
-        infoPaint.textSize =
-            15f
+        smallPaint.textAlign =
+            Paint.Align.CENTER
 
-        infoPaint.color =
+        smallPaint.textSize =
+            17f
+
+        smallPaint.color =
             Color.rgb(
                 190,
-                230,
-                210
+                255,
+                215
+            )
+
+        canvas.drawText(
+            "PRĘDKOŚĆ KOŃCOWA: ${abs(velocity).toInt()} km/h",
+            centerX,
+            centerY + 25f,
+            smallPaint
+        )
+
+        titlePaint.textSize =
+            22f
+
+        titlePaint.color =
+            Color.rgb(
+                255,
+                220,
+                80
+            )
+
+        canvas.drawText(
+            "+$reward MONET",
+            centerX,
+            centerY + 67f,
+            titlePaint
+        )
+
+        smallPaint.textSize =
+            15f
+
+        smallPaint.color =
+            Color.argb(
+                (
+                    150f +
+                        pulse * 105f
+                    ).toInt(),
+                255,
+                255,
+                255
             )
 
         canvas.drawText(
             "MISJA ZAKOŃCZONA",
             centerX,
-            centerY + 58f,
-            infoPaint
+            centerY + 108f,
+            smallPaint
         )
 
-        infoPaint.textAlign =
+        smallPaint.textAlign =
             Paint.Align.LEFT
     }
 
     private fun drawFailure(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float
+        canvas: Canvas
     ) {
+
+        val centerX =
+            width / 2f
+
+        val centerY =
+            height / 2f
+
+        val pulse =
+            (
+                sin(
+                    animationTime * 7f
+                ) * 0.5f +
+                    0.5f
+            ).toFloat()
 
         panelPaint.color =
             Color.argb(
-                235,
+                240,
                 65,
-                10,
-                15
+                8,
+                12
             )
 
         canvas.drawRoundRect(
-            20f,
-            centerY - 90f,
-            width - 20f,
-            centerY + 90f,
-            22f,
-            22f,
+            15f,
+            centerY - 155f,
+            width - 15f,
+            centerY + 155f,
+            25f,
+            25f,
             panelPaint
         )
 
         borderPaint.color =
             Color.rgb(
                 255,
-                70,
-                70
+                60,
+                60
             )
 
         canvas.drawRoundRect(
-            20f,
-            centerY - 90f,
-            width - 20f,
-            centerY + 90f,
-            22f,
-            22f,
+            15f,
+            centerY - 155f,
+            width - 15f,
+            centerY + 155f,
+            25f,
+            25f,
             borderPaint
         )
 
@@ -488,49 +930,52 @@ class LandingHudView(
             Paint.Align.CENTER
 
         titlePaint.textSize =
-            29f
+            28f
 
         titlePaint.color =
             Color.rgb(
                 255,
-                80,
-                80
+                70,
+                70
             )
 
         canvas.drawText(
             "LĄDOWANIE NIEUDANE",
             centerX,
-            centerY - 42f,
+            centerY - 92f,
             titlePaint
         )
 
-        infoPaint.textAlign =
+        textPaint.textAlign =
             Paint.Align.CENTER
 
-        infoPaint.textSize =
-            18f
+        textPaint.textSize =
+            19f
 
-        infoPaint.color =
+        textPaint.color =
             Color.WHITE
 
         canvas.drawText(
-            "Rakieta nie utrzymała",
+            "RAKIETA NIE UTRZYMAŁA",
             centerX,
-            centerY - 5f,
-            infoPaint
+            centerY - 48f,
+            textPaint
         )
 
         canvas.drawText(
-            "bezpiecznej prędkości.",
+            "BEZPIECZNEJ PRĘDKOŚCI",
             centerX,
-            centerY + 22f,
-            infoPaint
+            centerY - 20f,
+            textPaint
         )
 
-        infoPaint.textSize =
-            15f
+        smallPaint.textAlign =
+            Paint.Align.CENTER
 
-        infoPaint.color =
+        smallPaint.textSize =
+            17f
+
+        smallPaint.color =
             Color.rgb(
                 255,
                 190,
@@ -538,13 +983,51 @@ class LandingHudView(
             )
 
         canvas.drawText(
-            "MISJA ZAKOŃCZONA",
+            "PRĘDKOŚĆ KOŃCOWA: ${abs(velocity).toInt()} km/h",
             centerX,
-            centerY + 58f,
-            infoPaint
+            centerY + 25f,
+            smallPaint
         )
 
-        infoPaint.textAlign =
+        titlePaint.textSize =
+            21f
+
+        titlePaint.color =
+            Color.rgb(
+                255,
+                150,
+                150
+            )
+
+        canvas.drawText(
+            "NAGRODA: 0 MONET",
+            centerX,
+            centerY + 67f,
+            titlePaint
+        )
+
+        smallPaint.textSize =
+            15f
+
+        smallPaint.color =
+            Color.argb(
+                (
+                    150f +
+                        pulse * 105f
+                    ).toInt(),
+                255,
+                220,
+                220
+            )
+
+        canvas.drawText(
+            "MISJA NIEZALICZONA",
+            centerX,
+            centerY + 108f,
+            smallPaint
+        )
+
+        smallPaint.textAlign =
             Paint.Align.LEFT
     }
 
