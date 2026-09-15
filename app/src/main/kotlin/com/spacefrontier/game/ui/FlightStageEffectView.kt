@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RadialGradient
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.view.View
@@ -32,17 +33,32 @@ class FlightStageEffectView(
     private val corePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
-    private val smokePaint =
+    private val particlePaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val textPaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
+    private val separatorPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var phase:
             GameState.GamePhase? = null
 
-    private var animationTime =
-        0f
+    private var previousStage =
+        0
 
     private var stage =
         0
+
+    private var animationTime =
+        0f
+
+    private var separationAnimation =
+        0f
+
+    private var showSeparation =
+        false
 
     private val random =
         Random(System.currentTimeMillis())
@@ -56,6 +72,21 @@ class FlightStageEffectView(
 
                 animationTime +=
                     0.12f
+
+                if (showSeparation) {
+
+                    separationAnimation +=
+                        0.08f
+
+                    if (
+                        separationAnimation >=
+                        1.0f
+                    ) {
+
+                        showSeparation =
+                            false
+                    }
+                }
 
                 invalidate()
 
@@ -72,6 +103,12 @@ class FlightStageEffectView(
             View.LAYER_TYPE_SOFTWARE,
             null
         )
+
+        textPaint.typeface =
+            Typeface.DEFAULT_BOLD
+
+        separatorPaint.typeface =
+            Typeface.DEFAULT_BOLD
 
         handler.post(
             updateRunnable
@@ -119,8 +156,10 @@ class FlightStageEffectView(
         phase =
             state.gamePhase
 
-        stage =
-            when (state.gamePhase) {
+        val newStage =
+            when (
+                state.gamePhase
+            ) {
 
                 GameState.GamePhase.STAGE_1_ACTIVE ->
                     1
@@ -137,6 +176,29 @@ class FlightStageEffectView(
                 else ->
                     0
             }
+
+        if (
+            newStage > previousStage &&
+            previousStage > 0
+        ) {
+
+            showSeparation =
+                true
+
+            separationAnimation =
+                0f
+        }
+
+        if (
+            newStage > 0
+        ) {
+
+            previousStage =
+                newStage
+        }
+
+        stage =
+            newStage
     }
 
     override fun onDraw(
@@ -191,44 +253,139 @@ class FlightStageEffectView(
             when (stage) {
 
                 1 -> 1.0f
-
                 2 -> 1.45f
-
                 else -> 2.0f
             }
 
+        drawStageIndicator(
+            canvas,
+            centerX
+        )
+
         drawEngineGlow(
-            canvas = canvas,
-            centerX = centerX,
-            centerY = rocketBottom,
-            power = power
+            canvas,
+            centerX,
+            rocketBottom,
+            power
         )
 
         drawFlame(
-            canvas = canvas,
-            centerX = centerX,
-            centerY = rocketBottom,
-            power = power
+            canvas,
+            centerX,
+            rocketBottom,
+            power
         )
 
-        if (stage >= 2) {
-
-            drawParticles(
-                canvas = canvas,
-                centerX = centerX,
-                centerY = rocketBottom,
-                power = power
-            )
-        }
+        drawParticles(
+            canvas,
+            centerX,
+            rocketBottom,
+            power
+        )
 
         if (stage >= 3) {
 
             drawOverloadGlow(
-                canvas = canvas,
-                centerX = centerX,
-                centerY = rocketBottom
+                canvas,
+                centerX,
+                rocketBottom
             )
         }
+
+        if (showSeparation) {
+
+            drawStageSeparation(
+                canvas,
+                centerX,
+                rocketBottom
+            )
+        }
+    }
+
+    private fun drawStageIndicator(
+        canvas: Canvas,
+        centerX: Float
+    ) {
+
+        val stageText =
+            when (stage) {
+
+                1 ->
+                    "STAGE 1  •  START"
+
+                2 ->
+                    "STAGE 2  •  BOOST"
+
+                else ->
+                    "STAGE 3  •  MAX THRUST"
+            }
+
+        val powerText =
+            when (stage) {
+
+                1 ->
+                    "CIĄG 100%"
+
+                2 ->
+                    "CIĄG 145%"
+
+                else ->
+                    "CIĄG 200%"
+            }
+
+        textPaint.textAlign =
+            Paint.Align.CENTER
+
+        textPaint.textSize =
+            20f
+
+        textPaint.color =
+            when (stage) {
+
+                1 ->
+                    Color.WHITE
+
+                2 ->
+                    Color.rgb(
+                        255,
+                        210,
+                        80
+                    )
+
+                else ->
+                    Color.rgb(
+                        100,
+                        210,
+                        255
+                    )
+            }
+
+        canvas.drawText(
+            stageText,
+            centerX,
+            34f,
+            textPaint
+        )
+
+        textPaint.textSize =
+            13f
+
+        textPaint.color =
+            Color.rgb(
+                190,
+                205,
+                220
+            )
+
+        canvas.drawText(
+            powerText,
+            centerX,
+            53f,
+            textPaint
+        )
+
+        textPaint.textAlign =
+            Paint.Align.LEFT
     }
 
     private fun drawEngineGlow(
@@ -259,15 +416,15 @@ class FlightStageEffectView(
                 radius,
                 intArrayOf(
                     Color.argb(
-                        170,
+                        180,
                         255,
-                        120,
-                        20
+                        150,
+                        30
                     ),
                     Color.argb(
-                        80,
+                        90,
                         255,
-                        60,
+                        70,
                         10
                     ),
                     Color.TRANSPARENT
@@ -312,267 +469,50 @@ class FlightStageEffectView(
                     power *
                     pulse
 
-        val width =
+        val flameWidth =
             18f *
                     power
 
-        val top =
-            centerY
-
-        val bottom =
-            centerY +
-                    flameLength
-
         flamePaint.color =
-            Color.argb(
-                210,
-                255,
-                120,
-                20
-            )
+            when (stage) {
 
-        flamePaint.style =
-            Paint.Style.FILL
+                1 ->
+                    Color.rgb(
+                        255,
+                        125,
+                        20
+                    )
+
+                2 ->
+                    Color.rgb(
+                        255,
+                        90,
+                        15
+                    )
+
+                else ->
+                    Color.rgb(
+                        255,
+                        60,
+                        10
+                    )
+            }
 
         val flamePath =
             android.graphics.Path()
 
         flamePath.moveTo(
-            centerX - width,
-            top
+            centerX -
+                    flameWidth,
+            centerY
         )
 
         flamePath.cubicTo(
             centerX -
-                    width * 0.8f,
-            top +
+                    flameWidth * 0.8f,
+            centerY +
                     flameLength * 0.35f,
 
             centerX -
-                    width * 0.55f,
-            bottom -
-                    flameLength * 0.15f,
-
-            centerX,
-            bottom
-        )
-
-        flamePath.cubicTo(
-            centerX +
-                    width * 0.55f,
-            bottom -
-                    flameLength * 0.15f,
-
-            centerX +
-                    width * 0.8f,
-            top +
-                    flameLength * 0.35f,
-
-            centerX + width,
-            top
-        )
-
-        flamePath.close()
-
-        canvas.drawPath(
-            flamePath,
-            flamePaint
-        )
-
-        val coreLength =
-            flameLength *
-                    0.65f
-
-        corePaint.color =
-            Color.argb(
-                245,
-                255,
-                235,
-                150
-            )
-
-        val corePath =
-            android.graphics.Path()
-
-        corePath.moveTo(
-            centerX -
-                    width * 0.42f,
-            top
-        )
-
-        corePath.cubicTo(
-            centerX -
-                    width * 0.28f,
-            top +
-                    coreLength * 0.35f,
-
-            centerX -
-                    width * 0.18f,
-            top +
-                    coreLength * 0.75f,
-
-            centerX,
-            top +
-                    coreLength
-        )
-
-        corePath.cubicTo(
-            centerX +
-                    width * 0.18f,
-            top +
-                    coreLength * 0.75f,
-
-            centerX +
-                    width * 0.28f,
-            top +
-                    coreLength * 0.35f,
-
-            centerX +
-                    width * 0.42f,
-            top
-        )
-
-        corePath.close()
-
-        canvas.drawPath(
-            corePath,
-            corePaint
-        )
-    }
-
-    private fun drawParticles(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float,
-        power: Float
-    ) {
-
-        smokePaint.color =
-            Color.argb(
-                110,
-                180,
-                200,
-                220
-            )
-
-        repeat(
-            (8 * power).toInt()
-        ) {
-
-            val seed =
-                animationTime *
-                        7f +
-                        it * 1.7f
-
-            val angle =
-                seed +
-                        random.nextFloat() *
-                        1.5f
-
-            val distance =
-                25f +
-                        (
-                            sin(
-                                seed * 2f
-                            ) + 1f
-                        ) *
-                        35f *
-                        power
-
-            val x =
-                centerX +
-                        cos(angle) *
-                        distance
-
-            val y =
-                centerY +
-                        40f +
-                        (
-                            (
-                                animationTime * 90f +
-                                it * 25f
-                            ) %
-                                (110f * power)
-                            )
-
-            val radius =
-                2f +
-                        random.nextFloat() *
-                        4f
-
-            canvas.drawCircle(
-                x.toFloat(),
-                y,
-                radius,
-                smokePaint
-            )
-        }
-    }
-
-    private fun drawOverloadGlow(
-        canvas: Canvas,
-        centerX: Float,
-        centerY: Float
-    ) {
-
-        val pulse =
-            (
-                sin(
-                    animationTime * 14.0
-                ) *
-                    0.5f +
-                    0.5f
-                ).toFloat()
-
-        val radius =
-            70f +
-                    pulse * 25f
-
-        glowPaint.shader =
-            RadialGradient(
-                centerX,
-                centerY,
-                radius,
-                intArrayOf(
-                    Color.argb(
-                        120,
-                        80,
-                        180,
-                        255
-                    ),
-                    Color.argb(
-                        60,
-                        30,
-                        100,
-                        255
-                    ),
-                    Color.TRANSPARENT
-                ),
-                floatArrayOf(
-                    0f,
-                    0.5f,
-                    1f
-                ),
-                Shader.TileMode.CLAMP
-            )
-
-        canvas.drawCircle(
-            centerX,
-            centerY,
-            radius,
-            glowPaint
-        )
-
-        glowPaint.shader =
-            null
-    }
-
-    override fun onDetachedFromWindow() {
-
-        handler.removeCallbacks(
-            updateRunnable
-        )
-
-        super.onDetachedFromWindow()
-    }
-}
+                    flameWidth * 0.55f,
+            center
