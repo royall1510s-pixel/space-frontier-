@@ -53,8 +53,17 @@
         android:id="@+id/rocketView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2.2"
+        android:layout_weight="2.0"
         android:background="#061225" />
+
+    <com.spacefrontier.game.ui.FlightHudView
+        android:id="@+id/flightHud"
+        android:layout_width="match_parent"
+        android:layout_height="145dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="4dp" />
 
     <TextView
         android:layout_width="match_parent"
@@ -71,7 +80,7 @@
         android:id="@+id/rocketScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2.1"
+        android:layout_weight="1.8"
         android:fillViewport="true">
 
         <LinearLayout
