@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -35,6 +36,9 @@ class FlightStageEffectView(
     private val particlePaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
+    private val smokePaint =
+        Paint(Paint.ANTI_ALIAS_FLAG)
+
     private val textPaint =
         Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -42,7 +46,7 @@ class FlightStageEffectView(
         Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var gamePhase:
-            GameState.GamePhase? = null
+        GameState.GamePhase? = null
 
     private var stage =
         0
@@ -69,7 +73,9 @@ class FlightStageEffectView(
                 animationTime +=
                     0.10f
 
-                if (separationVisible) {
+                if (
+                    separationVisible
+                ) {
 
                     separationTime +=
                         0.10f
@@ -112,7 +118,7 @@ class FlightStageEffectView(
     }
 
     private fun getGameEngine():
-            GameEngine? {
+        GameEngine? {
 
         val activity =
             context as? Activity
@@ -130,7 +136,7 @@ class FlightStageEffectView(
                 true
 
             field.get(activity)
-                    as? GameEngine
+                as? GameEngine
 
         } catch (
             exception: Exception
@@ -241,6 +247,17 @@ class FlightStageEffectView(
                     2.0f
             }
 
+        canvas.save()
+
+        drawEngineShake(
+            canvas
+        )
+
+        drawSpeedLines(
+            canvas,
+            centerX
+        )
+
         drawStageLabel(
             canvas,
             centerX
@@ -254,6 +271,13 @@ class FlightStageEffectView(
         )
 
         drawFlame(
+            canvas,
+            centerX,
+            engineY,
+            power
+        )
+
+        drawSmoke(
             canvas,
             centerX,
             engineY,
@@ -286,6 +310,116 @@ class FlightStageEffectView(
                 canvas,
                 centerX,
                 engineY
+            )
+        }
+
+        canvas.restore()
+    }
+
+    private fun drawEngineShake(
+        canvas: Canvas
+    ) {
+
+        if (
+            stage <= 0
+        ) {
+            return
+        }
+
+        val intensity =
+            when (stage) {
+
+                1 ->
+                    0.8f
+
+                2 ->
+                    1.6f
+
+                else ->
+                    2.8f
+            }
+
+        val x =
+            sin(
+                animationTime * 35f
+            ) *
+                intensity
+
+        val y =
+            cos(
+                animationTime * 31f
+            ) *
+                intensity
+
+        canvas.translate(
+            x.toFloat(),
+            y.toFloat()
+        )
+    }
+
+    private fun drawSpeedLines(
+        canvas: Canvas,
+        centerX: Float
+    ) {
+
+        if (
+            stage < 2
+        ) {
+            return
+        }
+
+        val count =
+            if (stage == 2) {
+                8
+            } else {
+                14
+            }
+
+        val linePaint =
+            Paint(
+                Paint.ANTI_ALIAS_FLAG
+            )
+
+        linePaint.color =
+            Color.argb(
+                90,
+                130,
+                210,
+                255
+            )
+
+        linePaint.strokeWidth =
+            2f
+
+        for (
+            index in 0 until count
+        ) {
+
+            val angle =
+                animationTime * 1.8f +
+                    index * 0.45f
+
+            val side =
+                sin(angle) * 130f
+
+            val top =
+                70f +
+                    (
+                        index * 37f
+                    )
+
+            val length =
+                20f +
+                    stage * 8f
+
+            canvas.drawLine(
+                centerX +
+                    side.toFloat(),
+                top,
+                centerX +
+                    side.toFloat(),
+                top + length,
+                linePaint
             )
         }
     }
@@ -389,12 +523,12 @@ class FlightStageEffectView(
                     animationTime * 5f
                 ) * 0.12f +
                     0.88f
-                ).toFloat()
+            ).toFloat()
 
         val radius =
             42f *
-                    power *
-                    pulse
+                power *
+                pulse
 
         glowPaint.shader =
             RadialGradient(
@@ -403,13 +537,13 @@ class FlightStageEffectView(
                 radius,
                 intArrayOf(
                     Color.argb(
-                        180,
+                        190,
                         255,
                         150,
                         30
                     ),
                     Color.argb(
-                        80,
+                        90,
                         255,
                         70,
                         10
@@ -448,16 +582,16 @@ class FlightStageEffectView(
                     animationTime * 8f
                 ) * 0.10f +
                     1f
-                ).toFloat()
+            ).toFloat()
 
         val length =
             60f *
-                    power *
-                    pulse
+                power *
+                pulse
 
         val width =
             18f *
-                    power
+                power
 
         flamePaint.color =
             when (stage) {
@@ -485,7 +619,7 @@ class FlightStageEffectView(
             }
 
         val path =
-            android.graphics.Path()
+            Path()
 
         path.moveTo(
             centerX - width,
@@ -493,22 +627,31 @@ class FlightStageEffectView(
         )
 
         path.cubicTo(
-            centerX - width * 0.85f,
-            centerY + length * 0.30f,
+            centerX -
+                width * 0.85f,
+            centerY +
+                length * 0.30f,
 
-            centerX - width * 0.55f,
-            centerY + length * 0.80f,
+            centerX -
+                width * 0.55f,
+            centerY +
+                length * 0.80f,
 
             centerX,
-            centerY + length
+            centerY +
+                length
         )
 
         path.cubicTo(
-            centerX + width * 0.55f,
-            centerY + length * 0.80f,
+            centerX +
+                width * 0.55f,
+            centerY +
+                length * 0.80f,
 
-            centerX + width * 0.85f,
-            centerY + length * 0.30f,
+            centerX +
+                width * 0.85f,
+            centerY +
+                length * 0.30f,
 
             centerX + width,
             centerY
@@ -532,32 +675,43 @@ class FlightStageEffectView(
             )
 
         val core =
-            android.graphics.Path()
+            Path()
 
         core.moveTo(
-            centerX - width * 0.40f,
+            centerX -
+                width * 0.40f,
             centerY
         )
 
         core.cubicTo(
-            centerX - width * 0.25f,
-            centerY + coreLength * 0.35f,
+            centerX -
+                width * 0.25f,
+            centerY +
+                coreLength * 0.35f,
 
-            centerX - width * 0.15f,
-            centerY + coreLength * 0.75f,
+            centerX -
+                width * 0.15f,
+            centerY +
+                coreLength * 0.75f,
 
             centerX,
-            centerY + coreLength
+            centerY +
+                coreLength
         )
 
         core.cubicTo(
-            centerX + width * 0.15f,
-            centerY + coreLength * 0.75f,
+            centerX +
+                width * 0.15f,
+            centerY +
+                coreLength * 0.75f,
 
-            centerX + width * 0.25f,
-            centerY + coreLength * 0.35f,
+            centerX +
+                width * 0.25f,
+            centerY +
+                coreLength * 0.35f,
 
-            centerX + width * 0.40f,
+            centerX +
+                width * 0.40f,
             centerY
         )
 
@@ -569,6 +723,81 @@ class FlightStageEffectView(
         )
     }
 
+    private fun drawSmoke(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        power: Float
+    ) {
+
+        smokePaint.color =
+            Color.argb(
+                70,
+                180,
+                195,
+                210
+            )
+
+        val count =
+            when (stage) {
+
+                1 ->
+                    4
+
+                2 ->
+                    7
+
+                else ->
+                    10
+            }
+
+        for (
+            index in 0 until count
+        ) {
+
+            val movement =
+                animationTime * 1.5f +
+                    index * 0.9f
+
+            val x =
+                centerX +
+                    sin(
+                        movement
+                    ) *
+                    (
+                        25f +
+                            index * 5f
+                    )
+
+            val y =
+                centerY +
+                    40f +
+                    (
+                        (
+                            animationTime *
+                                45f +
+                                index *
+                                32f
+                        ) %
+                            (
+                                130f *
+                                    power
+                            )
+                    )
+
+            val radius =
+                5f +
+                    index % 4
+
+            canvas.drawCircle(
+                x.toFloat(),
+                y.toFloat(),
+                radius.toFloat(),
+                smokePaint
+            )
+        }
+    }
+
     private fun drawParticles(
         canvas: Canvas,
         centerX: Float,
@@ -578,9 +807,9 @@ class FlightStageEffectView(
 
         particlePaint.color =
             Color.argb(
-                125,
-                190,
-                210,
+                135,
+                220,
+                225,
                 230
             )
 
@@ -591,10 +820,10 @@ class FlightStageEffectView(
                     5
 
                 2 ->
-                    10
+                    11
 
                 else ->
-                    16
+                    18
             }
 
         for (
@@ -602,10 +831,8 @@ class FlightStageEffectView(
         ) {
 
             val movement =
-                animationTime *
-                    5f +
-                    index *
-                    1.7f
+                animationTime * 7f +
+                    index * 1.7f
 
             val spread =
                 sin(
@@ -620,9 +847,9 @@ class FlightStageEffectView(
                         100f +
                         index *
                         23f
-                    ) %
+                ) %
                     (
-                        100f *
+                        105f *
                             power
                     )
 
@@ -637,10 +864,7 @@ class FlightStageEffectView(
 
             val radius =
                 2f +
-                    (
-                        index %
-                            3
-                    )
+                    index % 3
 
             canvas.drawCircle(
                 x.toFloat(),
@@ -663,11 +887,11 @@ class FlightStageEffectView(
                     animationTime * 14f
                 ) * 0.5f +
                     0.5f
-                ).toFloat()
+            ).toFloat()
 
         val radius =
             60f +
-                pulse * 25f
+                pulse * 28f
 
         glowPaint.shader =
             RadialGradient(
@@ -676,13 +900,13 @@ class FlightStageEffectView(
                 radius,
                 intArrayOf(
                     Color.argb(
-                        120,
+                        130,
                         70,
                         190,
                         255
                     ),
                     Color.argb(
-                        55,
+                        60,
                         30,
                         100,
                         255
@@ -725,7 +949,7 @@ class FlightStageEffectView(
             (
                 (1f - progress) *
                     255f
-                ).toInt()
+            ).toInt()
                 .coerceIn(
                     0,
                     255
@@ -733,7 +957,7 @@ class FlightStageEffectView(
 
         val radius =
             35f +
-                progress * 130f
+                progress * 150f
 
         separationPaint.style =
             Paint.Style.STROKE
